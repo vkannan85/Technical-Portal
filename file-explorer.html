@@ -1,0 +1,2304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>FileView — Workspace</title>
+<script src="https://cdn.jsdelivr.net/npm/marked@9/marked.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0d1117;--sidebar:#010409;--header:#161b22;--panel:#161b22;
+  --border:#30363d;--accent:#7c3aed;--accent2:#a78bfa;
+  --text:#e6edf3;--text2:#8b949e;--text3:#484f58;
+  --hover:#1d2433;--active-bg:#3d1f8a;--active-text:#c4b5fd;
+  --green:#3fb950;--yellow:#d29922;--blue:#58a6ff;--red:#f85149;
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);height:100vh;display:flex;flex-direction:column;overflow:hidden;font-size:14px}
+
+/* ── Header ── */
+#hdr{height:50px;background:var(--header);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 14px;gap:10px;flex-shrink:0;z-index:20}
+.logo{font-size:16px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:8px;white-space:nowrap}
+.logo-dot{width:8px;height:8px;border-radius:50%;background:linear-gradient(135deg,#7c3aed,#3b82f6);flex-shrink:0}
+#btn-open{background:linear-gradient(135deg,#7c3aed,#5b21b6);color:#fff;border:none;padding:6px 14px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;transition:opacity .15s;white-space:nowrap;flex-shrink:0}
+#btn-open:hover{opacity:.85}
+#hdr-info{font-size:12px;color:var(--text3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0}
+
+/* Edit-mode header actions */
+#hdr-edit{display:none;align-items:center;gap:8px;margin-left:auto;flex-shrink:0}
+#save-status{font-size:12px;font-weight:500}
+#save-status.unsaved{color:var(--yellow)}
+#save-status.saved{color:var(--green)}
+#save-status.readonly{color:var(--text3);font-style:italic}
+#save-btn{background:var(--accent);color:#fff;border:none;padding:5px 14px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer}
+#save-btn:hover{opacity:.85}
+#cancel-edit-btn{background:none;border:1px solid var(--border);color:var(--text2);padding:5px 10px;border-radius:6px;font-size:12px;cursor:pointer}
+#cancel-edit-btn:hover{color:var(--text);border-color:var(--text2)}
+#insert-table-btn,#add-row-btn,#add-col-btn{background:none;border:1px solid var(--border);color:var(--text2);padding:5px 10px;border-radius:6px;font-size:12px;cursor:pointer}
+#insert-table-btn:hover,#add-row-btn:hover,#add-col-btn:hover{color:var(--text);border-color:var(--accent)}
+#insert-table-btn:disabled,#add-row-btn:disabled,#add-col-btn:disabled{opacity:.4;cursor:default}
+
+/* ── Layout ── */
+#layout{display:flex;flex:1;overflow:hidden}
+
+/* ── Sidebar ── */
+#sb{width:280px;min-width:180px;max-width:500px;background:var(--sidebar);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;flex-shrink:0}
+#sb-top{padding:10px;border-bottom:1px solid var(--border)}
+.search-box{position:relative}
+.search-box input{width:100%;background:#0d1117;border:1px solid var(--border);border-radius:8px;padding:7px 10px 7px 32px;color:var(--text);font-size:13px;outline:none;transition:border-color .15s}
+.search-box input:focus{border-color:var(--accent)}
+.search-box input::placeholder{color:var(--text3)}
+.s-icon{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:13px;pointer-events:none}
+
+#tree{flex:1;overflow-y:auto;padding-bottom:8px}
+#tree::-webkit-scrollbar{width:4px}
+#tree::-webkit-scrollbar-thumb{background:#30363d;border-radius:4px}
+#tree::-webkit-scrollbar-track{background:transparent}
+
+/* ── Folder sections ── */
+.fsec{border-bottom:1px solid #1a1f27}
+.fhdr{display:flex;align-items:center;gap:5px;padding:8px 8px 8px 6px;cursor:pointer;position:sticky;top:0;z-index:5;background:var(--sidebar)}
+.fhdr:hover{background:#0d1117}
+.fhdr-chev{background:none;border:none;color:var(--text3);font-size:9px;width:12px;transition:transform .15s;flex-shrink:0;cursor:pointer;padding:0}
+.fhdr-chev.open{transform:rotate(90deg)}
+.fhdr-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.fhdr-name{font-size:13px;font-weight:600;color:var(--text);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.fhdr-acts{display:none;align-items:center;gap:1px;flex-shrink:0}
+.fhdr:hover .fhdr-acts{display:flex}
+.fhdr-btn{background:none;border:none;cursor:pointer;color:var(--text2);font-size:14px;width:22px;height:22px;border-radius:4px;display:flex;align-items:center;justify-content:center;padding:0}
+.fhdr-btn:hover{background:var(--hover);color:var(--text)}
+.fhdr-btn.del:hover{color:var(--red)}
+.ftree{padding:2px 4px 4px}
+
+/* ── Tree items ── */
+.tree-item{display:flex;align-items:center;gap:5px;padding:5px 8px;border-radius:6px;cursor:pointer;font-size:13px;color:var(--text2);transition:background .1s,color .1s;white-space:nowrap;overflow:hidden;position:relative}
+.tree-item:hover{background:var(--hover);color:var(--text)}
+.tree-item.active{background:var(--active-bg);color:var(--active-text)}
+.tree-item.dir{font-weight:500}
+.ti-chev{font-size:9px;color:var(--text3);transition:transform .15s;flex-shrink:0;width:10px;text-align:center}
+.ti-chev.open{transform:rotate(90deg)}
+.ti-icon{font-size:14px;flex-shrink:0;width:18px;text-align:center}
+.ti-name{flex:1;overflow:hidden;text-overflow:ellipsis}
+/* Item action buttons (favourite / new / delete) shown on hover */
+.item-acts{display:none;margin-left:auto;flex-shrink:0;gap:1px;align-items:center}
+.tree-item:hover .item-acts{display:flex}
+.dir-add{width:18px;height:18px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:var(--text3);cursor:pointer;line-height:1}
+.dir-add:hover{background:#21262d;color:var(--accent2)}
+.item-fav,.item-del{width:18px;height:18px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--text3);cursor:pointer;line-height:1}
+.item-fav:hover,.item-fav.active{color:#f59e0b}
+.item-del:hover{background:#21262d;color:var(--red)}
+
+/* ── Inline create row ── */
+.create-row{gap:4px;cursor:default;background:transparent!important}
+.create-row:hover{background:transparent!important}
+.cr-toggle{background:none;border:1px solid var(--border);border-radius:4px;cursor:pointer;padding:1px 5px;font-size:12px;flex-shrink:0;color:var(--text2)}
+.cr-toggle:hover{border-color:var(--accent2)}
+.cr-input{flex:1;min-width:0;background:#0d1117;border:1px solid var(--accent);border-radius:5px;padding:3px 8px;color:var(--text);font-size:12px;outline:none;font-family:inherit}
+.cr-ok,.cr-cancel{background:none;border:none;cursor:pointer;color:var(--text2);font-size:13px;padding:2px 4px;border-radius:4px;flex-shrink:0}
+.cr-ok:hover{color:var(--green)}
+.cr-cancel:hover{color:var(--red)}
+
+/* ── Empty / no folders ── */
+.empty-sb{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 20px;gap:12px;color:var(--text3);text-align:center}
+.empty-sb .e-icon{font-size:40px;opacity:.35}
+.empty-sb p{font-size:12px;line-height:1.7}
+
+/* ── Resize handle ── */
+#rh{width:5px;background:transparent;cursor:col-resize;flex-shrink:0;transition:background .15s}
+#rh:hover,#rh.active{background:var(--accent)}
+
+/* ── Content ── */
+#content{flex:1;display:flex;flex-direction:column;overflow:hidden;background:var(--bg)}
+#c-hdr{height:44px;background:var(--panel);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 14px;gap:8px;flex-shrink:0;display:none}
+.c-icon{font-size:16px;flex-shrink:0}
+.c-name{font-weight:600;color:var(--text);font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:260px}
+.c-badge{font-size:10px;font-weight:700;padding:2px 7px;border-radius:12px;background:#21262d;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;flex-shrink:0}
+.c-path{font-size:11px;color:var(--text3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0}
+#edit-btn{margin-left:auto;padding:4px 12px;background:none;border:1px solid var(--border);border-radius:6px;color:var(--text2);font-size:12px;cursor:pointer;flex-shrink:0;display:none}
+#edit-btn:hover{border-color:var(--accent2);color:var(--accent2)}
+
+/* ── View body ── */
+#view-body{flex:1;overflow:auto;padding:20px}
+#view-body::-webkit-scrollbar{width:6px}
+#view-body::-webkit-scrollbar-thumb{background:#30363d;border-radius:4px}
+#view-body::-webkit-scrollbar-track{background:transparent}
+
+/* ── Edit body ── */
+#edit-body{display:none;flex:1;flex-direction:column;overflow:hidden}
+#edit-area{flex:1;width:100%;background:#0d1117;color:#adbac7;border:none;padding:20px 24px;font-family:'JetBrains Mono','Fira Code',Consolas,monospace;font-size:13.5px;line-height:1.75;resize:none;outline:none;tab-size:2;overflow:auto}
+#edit-area::-webkit-scrollbar{width:6px}
+#edit-area::-webkit-scrollbar-thumb{background:#30363d;border-radius:4px}
+
+/* ── Welcome ── */
+.welcome{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;color:var(--text3);text-align:center;padding:20px}
+.welcome .w-icon{font-size:56px;opacity:.25}
+.welcome h2{font-size:20px;font-weight:700;color:#484f58}
+.welcome p{font-size:13px;max-width:340px;line-height:1.75;color:var(--text3)}
+.welcome .tip{background:#161b22;border:1px solid var(--border);border-radius:8px;padding:12px 16px;font-size:12px;color:var(--text2);line-height:1.8;max-width:340px;text-align:left;margin-top:4px}
+.welcome .tip b{color:var(--accent2)}
+
+/* ── Markdown ── */
+.md{background:var(--panel);border-radius:12px;padding:32px 40px;max-width:860px;line-height:1.8;color:#cdd9e5;font-size:15px}
+.md h1,.md h2,.md h3,.md h4{color:var(--text);font-weight:700;margin:28px 0 12px;line-height:1.3}
+.md h1{font-size:28px}.md h2{font-size:22px;border-bottom:1px solid var(--border);padding-bottom:8px}.md h3{font-size:18px}.md h4{font-size:15px}
+.md p{margin:0 0 16px}.md a{color:var(--blue)}.md a:hover{text-decoration:underline}
+.md code{background:#21262d;padding:2px 6px;border-radius:5px;font-size:13px;color:#a5d6ff;font-family:'JetBrains Mono','Fira Code',Consolas,monospace}
+.md pre{margin:16px 0;border-radius:10px;overflow:hidden}.md pre code{background:none;padding:0;color:inherit;font-size:13px}
+.md blockquote{border-left:3px solid var(--accent2);margin:16px 0;padding:10px 16px;background:#161b22;border-radius:0 8px 8px 0;color:var(--text2)}
+.md ul,.md ol{padding-left:24px;margin:0 0 16px}.md li{margin-bottom:6px}
+.md table{border-collapse:collapse;width:100%;margin:16px 0;font-size:13px}.md th,.md td{border:1px solid var(--border);padding:8px 14px}.md th{background:#21262d;color:var(--text2);font-weight:600}.md tr:hover td{background:#1d2433}
+.md img{max-width:100%;border-radius:8px;margin:8px 0}.md hr{border:none;border-top:1px solid var(--border);margin:24px 0}
+
+/* ── Code ── */
+.code-wrap{background:#161b22;border-radius:12px;overflow:hidden;border:1px solid var(--border)}
+.code-bar{background:#21262d;padding:8px 16px;display:flex;align-items:center;justify-content:space-between;font-size:12px;border-bottom:1px solid var(--border)}
+.code-lang{color:var(--accent2);font-weight:700}.code-meta{color:var(--text3)}
+.code-wrap pre{padding:20px;overflow-x:auto;background:#161b22!important;margin:0}
+.code-wrap pre code{font-family:'JetBrains Mono','Fira Code',Consolas,monospace;font-size:13px;line-height:1.6;background:transparent!important}
+
+/* ── Table ── */
+.sheet-tabs{display:flex;gap:4px;margin-bottom:14px;flex-wrap:wrap}
+.stab{padding:5px 12px;border-radius:6px;font-size:12px;cursor:pointer;color:var(--text2);background:#21262d;border:1px solid var(--border);transition:all .1s}
+.stab:hover{color:var(--text)}.stab.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.tbl-wrap{overflow:auto;max-height:calc(100vh - 160px);border-radius:10px;border:1px solid var(--border)}
+.sheet-tbl{border-collapse:collapse;font-size:13px;min-width:100%;white-space:nowrap}
+.sheet-tbl th{background:#21262d;color:var(--text2);font-weight:600;padding:9px 14px;text-align:left;border:1px solid var(--border);position:sticky;top:0;z-index:2}
+.sheet-tbl td{padding:7px 14px;border:1px solid #21262d;color:#cdd9e5}.sheet-tbl tr:hover td{background:#1d2433}
+.rn{color:var(--text3)!important;text-align:right!important;user-select:none}
+
+/* ── Images / media ── */
+.img-view{display:flex;align-items:center;justify-content:center;min-height:300px;padding:20px}
+.img-view img{max-width:100%;max-height:calc(100vh - 160px);border-radius:8px;box-shadow:0 20px 60px rgba(0,0,0,.6)}
+.frame-wrap{border-radius:12px;overflow:hidden;border:1px solid var(--border)}
+.frame-wrap iframe{width:100%;border:none;display:block}
+.html-frame iframe,.pdf-frame iframe{height:calc(100vh - 140px)}
+.vid-wrap{display:flex;align-items:center;justify-content:center;padding:16px}
+.vid-wrap video{max-width:100%;max-height:calc(100vh-160px);border-radius:10px;background:#000}
+.aud-wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;padding:60px 20px}
+.aud-icon{font-size:64px;opacity:.4}.aud-name{font-size:16px;font-weight:600;color:var(--text)}.aud-wrap audio{width:100%;max-width:520px}
+
+/* ── Word / PPTX ── */
+.docx-wrap{background:#fff;color:#1a1a1a;border-radius:12px;padding:48px 60px;max-width:860px;line-height:1.8;font-size:14.5px;box-shadow:0 8px 32px rgba(0,0,0,.4)}
+.docx-wrap h1,.docx-wrap h2,.docx-wrap h3{margin:24px 0 12px}.docx-wrap p{margin-bottom:12px}.docx-wrap table{border-collapse:collapse;width:100%}.docx-wrap td,.docx-wrap th{border:1px solid #ddd;padding:8px 12px}
+.slide-card{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:20px 28px;margin-bottom:14px}
+.slide-num{font-size:10px;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px}
+.slide-text{color:#cdd9e5;line-height:1.7;font-size:14px}
+
+/* ── No view / loading ── */
+.no-view{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:60px 20px;color:var(--text3);text-align:center}
+.no-icon{font-size:56px;opacity:.3}.no-view h3{font-size:17px;color:#484f58}.no-view p{font-size:13px;max-width:320px;line-height:1.6}
+.loading{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:60px;color:var(--text3)}
+.spinner{width:32px;height:32px;border:3px solid #21262d;border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+mark{background:rgba(124,58,237,.25);color:var(--accent2);border-radius:2px}
+
+/* ── Firewall rules table ── */
+.fw-toolbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:12px}
+.fw-add-btn{background:var(--accent);color:#fff;border:none;padding:7px 16px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap}
+.fw-add-btn:hover{opacity:.85}
+.fw-count{font-size:12px;color:var(--text3)}
+.fw-tbl td{padding:2px}
+.fw-input{width:100%;background:transparent;border:1px solid transparent;color:#cdd9e5;font-size:12px;padding:6px 7px;border-radius:4px;font-family:inherit;outline:none}
+.fw-input:hover{border-color:var(--border)}
+.fw-input:focus{border-color:var(--accent);background:#0d1117}
+select.fw-input{cursor:pointer}
+.fw-del{background:none;border:none;color:var(--text3);cursor:pointer;font-size:13px;padding:4px 8px;border-radius:4px}
+.fw-del:hover{color:var(--red);background:#21262d}
+
+/* ── Reconnect folder ── */
+.reconnect-wrap{padding:8px 12px}
+.reconnect-btn{width:100%;background:#21262d;border:1px solid var(--border);color:var(--text2);padding:8px;border-radius:6px;font-size:12px;cursor:pointer;transition:all .15s}
+.reconnect-btn:hover{border-color:var(--accent2);color:var(--accent2)}
+
+/* ── Search result flash ── */
+@keyframes flashHighlight{0%{background:var(--active-bg)}100%{background:transparent}}
+.flash{animation:flashHighlight 1.2s ease-out}
+
+/* ── Firewall / Timesheet table extras ── */
+.fw-filter-input{background:#0d1117;border:1px solid var(--border);border-radius:6px;padding:6px 10px;color:var(--text);font-size:12px;outline:none;width:120px}
+.fw-filter-input:focus{border-color:var(--accent)}
+.fw-clear-btn{background:none;border:1px solid var(--border);color:var(--text2);padding:6px 12px;border-radius:6px;font-size:12px;cursor:pointer;white-space:nowrap}
+.fw-clear-btn:hover{border-color:var(--accent2);color:var(--accent2)}
+.fw-export-btn{background:#21262d;border:1px solid var(--border);color:var(--text2);padding:7px 14px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap}
+.fw-export-btn:hover{color:var(--text);border-color:var(--accent2)}
+.fw-bulkbar{display:flex;align-items:center;gap:10px;background:#1d2433;border:1px solid var(--accent);border-radius:8px;padding:8px 12px;margin-bottom:10px;font-size:12px;color:var(--text2);flex-wrap:wrap}
+.fw-bulk-btn{background:#21262d;border:1px solid var(--border);color:var(--text2);padding:5px 12px;border-radius:6px;font-size:12px;cursor:pointer}
+.fw-bulk-btn:hover{color:var(--text);border-color:var(--accent2)}
+.fw-bulk-btn.danger:hover{color:var(--red);border-color:var(--red)}
+.fw-icon-btn{background:none;border:1px solid var(--border);color:var(--text2);width:26px;height:26px;border-radius:6px;cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center}
+.fw-icon-btn:hover{color:var(--text);border-color:var(--accent2)}
+.fw-icon-btn.del:hover{color:var(--red);border-color:var(--red)}
+.fw-icon-btn.save:hover{color:var(--green);border-color:var(--green)}
+.fw-icon-btn.cancel:hover{color:var(--red);border-color:var(--red)}
+.fw-status-badge{font-size:11px;font-weight:600;padding:3px 10px;border-radius:12px;background:#21262d;color:var(--text2)}
+.fw-status-impl{background:rgba(63,185,80,.15);color:var(--green)}
+.fw-status-pend{background:rgba(210,153,34,.15);color:var(--yellow)}
+.fw-cell{max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ts-nav-btn{background:#21262d;border:1px solid var(--border);color:var(--text2);width:30px;height:30px;border-radius:6px;cursor:pointer;font-size:13px}
+.ts-nav-btn:hover{color:var(--text);border-color:var(--accent2)}
+.ts-hours{text-align:center}
+.ts-over{color:var(--red);font-weight:700}
+
+/* ── Action Tracker ── */
+.at-section{margin-bottom:14px}
+.at-section-hdr{display:flex;align-items:center;gap:8px;padding:10px 12px;background:#161b22;border:1px solid var(--border);border-radius:8px}
+.at-section-hdr .ti-chev{cursor:pointer}
+.at-section-name{font-weight:600;font-size:14px;flex:1}
+.at-actions-wrap{padding:10px 0 4px 22px}
+.at-action{border:1px solid var(--border);border-radius:8px;margin-bottom:8px;background:#0d1117;padding:8px 12px}
+.at-action-hdr{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.at-action-hdr .ti-chev{cursor:pointer}
+.at-title{font-weight:500;flex:1;min-width:120px}
+.at-owner{font-size:11px;color:var(--text2);background:#21262d;padding:2px 8px;border-radius:10px;white-space:nowrap}
+.at-due{font-size:12px;color:var(--text3);white-space:nowrap}
+.at-overdue{color:var(--red);font-weight:600}
+.at-acts{display:flex;gap:4px;margin-left:auto}
+.at-comment{font-size:12px;color:var(--text3);margin-top:6px;padding-left:24px;white-space:pre-wrap}
+.at-comment-edit{margin-top:6px}
+.at-sub-wrap{margin-top:8px;padding:8px 0 0 24px;border-top:1px dashed var(--border)}
+.at-sub-item{padding:6px 0;border-bottom:1px dashed #21262d}
+.at-sub-item:last-of-type{border-bottom:none}
+.at-sub-hdr{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.at-sub-bullet{color:var(--text3)}
+.at-edit-grid{display:flex;gap:8px;flex:1;flex-wrap:wrap}
+.at-edit-grid input,.at-edit-grid select{flex:1;min-width:110px}
+.at-status-notstarted{background:#21262d;color:var(--text2)}
+.at-status-inprogress{background:rgba(88,166,255,.15);color:var(--blue)}
+.at-status-completed{background:rgba(63,185,80,.15);color:var(--green)}
+.at-status-blocked{background:rgba(248,81,73,.15);color:var(--red)}
+.at-status-onhold{background:rgba(210,153,34,.15);color:var(--yellow)}
+
+/* ── Sidebar collapse ── */
+#btn-collapse{background:none;border:1px solid var(--border);color:var(--text2);width:30px;height:30px;border-radius:8px;cursor:pointer;font-size:13px;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+#btn-collapse:hover{border-color:var(--accent2);color:var(--accent2)}
+#sb.collapsed{display:none}
+</style>
+</head>
+<body>
+
+<div id="hdr">
+  <div class="logo"><div class="logo-dot"></div>FileView</div>
+  <button id="btn-collapse" onclick="toggleSidebar()" title="Collapse sidebar">⬅</button>
+  <button id="btn-open" onclick="addFolder()" title="Add folder to workspace (Ctrl+O)">📂 Open Folder</button>
+  <span id="hdr-info">No folder open</span>
+  <div id="hdr-edit">
+    <span id="save-status"></span>
+    <button id="insert-table-btn" onclick="insertTableSnippet()" title="Insert an HTML table at the cursor">📋 Table</button>
+    <button id="add-row-btn" onclick="addTableRow()" title="Add a row to the table at/near the cursor">+ Row</button>
+    <button id="add-col-btn" onclick="addTableColumn()" title="Add a column to the table at/near the cursor">+ Col</button>
+    <button id="save-btn" onclick="saveFile()">💾 Save</button>
+    <button id="cancel-edit-btn" onclick="cancelEdit()">✕ Cancel</button>
+  </div>
+</div>
+
+<div id="layout">
+  <div id="sb">
+    <div id="sb-top">
+      <div class="search-box">
+        <span class="s-icon">⌕</span>
+        <input type="text" id="srch" placeholder="Search files & folders…" oninput="handleSearch(this.value)" autocomplete="off" />
+      </div>
+    </div>
+    <div id="tree"></div>
+  </div>
+
+  <div id="rh"></div>
+
+  <div id="content">
+    <div id="c-hdr">
+      <span class="c-icon" id="c-icon"></span>
+      <span class="c-name" id="c-name"></span>
+      <span class="c-badge" id="c-badge"></span>
+      <span class="c-path" id="c-path"></span>
+      <button id="edit-btn" onclick="startEdit()">✏ Edit</button>
+    </div>
+    <div id="view-body">
+      <div class="welcome">
+        <div class="w-icon">✦</div>
+        <h2>FileView Workspace</h2>
+        <p>Open one or more folders and click any file to preview it here.</p>
+        <div class="tip">
+          <b>📂 Multiple folders</b> — open Customer 1, Customer 2 etc. side by side<br>
+          <b>✏ Edit files</b> — click Edit on any text/code file and save with Ctrl+S<br>
+          <b>➕ New file/folder</b> — hover any folder in the sidebar and click +<br>
+          <b>🔍 Search</b> — searches across all open folders at once
+        </div>
+      </div>
+    </div>
+    <div id="edit-body">
+      <textarea id="edit-area" onkeydown="handleEditorKey(event)" oninput="markUnsaved()"></textarea>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─────────────────────────────────────────────
+// File type map
+// ─────────────────────────────────────────────
+const FT={
+  js:{i:'📜',l:'JavaScript',v:'code',lang:'javascript'},mjs:{i:'📜',l:'JavaScript',v:'code',lang:'javascript'},
+  ts:{i:'📘',l:'TypeScript',v:'code',lang:'typescript'},jsx:{i:'⚛',l:'JSX',v:'code',lang:'javascript'},tsx:{i:'⚛',l:'TSX',v:'code',lang:'typescript'},
+  css:{i:'🎨',l:'CSS',v:'code',lang:'css'},scss:{i:'🎨',l:'SCSS',v:'code',lang:'scss'},less:{i:'🎨',l:'LESS',v:'code',lang:'less'},
+  html:{i:'🌐',l:'HTML',v:'html'},htm:{i:'🌐',l:'HTML',v:'html'},
+  py:{i:'🐍',l:'Python',v:'code',lang:'python'},java:{i:'☕',l:'Java',v:'code',lang:'java'},
+  c:{i:'⚙',l:'C',v:'code',lang:'c'},cpp:{i:'⚙',l:'C++',v:'code',lang:'cpp'},h:{i:'⚙',l:'C Header',v:'code',lang:'cpp'},
+  cs:{i:'🔷',l:'C#',v:'code',lang:'csharp'},go:{i:'🐹',l:'Go',v:'code',lang:'go'},rs:{i:'🦀',l:'Rust',v:'code',lang:'rust'},
+  rb:{i:'💎',l:'Ruby',v:'code',lang:'ruby'},php:{i:'🐘',l:'PHP',v:'code',lang:'php'},swift:{i:'🍎',l:'Swift',v:'code',lang:'swift'},
+  kt:{i:'🟣',l:'Kotlin',v:'code',lang:'kotlin'},dart:{i:'🎯',l:'Dart',v:'code',lang:'dart'},lua:{i:'🌙',l:'Lua',v:'code',lang:'lua'},
+  sh:{i:'💻',l:'Shell',v:'code',lang:'bash'},bash:{i:'💻',l:'Bash',v:'code',lang:'bash'},zsh:{i:'💻',l:'Zsh',v:'code',lang:'bash'},
+  ps1:{i:'💙',l:'PowerShell',v:'code',lang:'powershell'},bat:{i:'💻',l:'Batch',v:'code',lang:'dos'},cmd:{i:'💻',l:'CMD',v:'code',lang:'dos'},
+  sql:{i:'🗄',l:'SQL',v:'code',lang:'sql'},r:{i:'📊',l:'R',v:'code',lang:'r'},
+  json:{i:'📋',l:'JSON',v:'json'},jsonc:{i:'📋',l:'JSONC',v:'json'},json5:{i:'📋',l:'JSON5',v:'json'},
+  yaml:{i:'⚙',l:'YAML',v:'code',lang:'yaml'},yml:{i:'⚙',l:'YAML',v:'code',lang:'yaml'},
+  toml:{i:'⚙',l:'TOML',v:'code',lang:'ini'},ini:{i:'⚙',l:'INI',v:'code',lang:'ini'},
+  env:{i:'🔐',l:'ENV',v:'code',lang:'bash'},xml:{i:'📄',l:'XML',v:'code',lang:'xml'},svg:{i:'🎨',l:'SVG',v:'svg'},
+  md:{i:'📝',l:'Markdown',v:'md'},mdx:{i:'📝',l:'MDX',v:'md'},
+  txt:{i:'📄',l:'Text',v:'code',lang:'plaintext'},log:{i:'📋',l:'Log',v:'code',lang:'plaintext'},csv:{i:'📊',l:'CSV',v:'excel'},
+  xlsx:{i:'📗',l:'Excel',v:'excel'},xls:{i:'📗',l:'Excel',v:'excel'},
+  docx:{i:'📘',l:'Word',v:'docx'},doc:{i:'📘',l:'Word',v:'docx'},
+  pptx:{i:'📙',l:'PowerPoint',v:'pptx'},ppt:{i:'📙',l:'PowerPoint',v:'pptx'},
+  pdf:{i:'📕',l:'PDF',v:'pdf'},
+  jpg:{i:'🖼',l:'JPEG',v:'img'},jpeg:{i:'🖼',l:'JPEG',v:'img'},png:{i:'🖼',l:'PNG',v:'img'},
+  gif:{i:'🖼',l:'GIF',v:'img'},webp:{i:'🖼',l:'WebP',v:'img'},bmp:{i:'🖼',l:'Bitmap',v:'img'},ico:{i:'🖼',l:'Icon',v:'img'},
+  mp4:{i:'🎬',l:'MP4',v:'video'},webm:{i:'🎬',l:'WebM',v:'video'},mkv:{i:'🎬',l:'MKV',v:'video'},mov:{i:'🎬',l:'MOV',v:'video'},avi:{i:'🎬',l:'AVI',v:'video'},
+  mp3:{i:'🎵',l:'MP3',v:'audio'},wav:{i:'🎵',l:'WAV',v:'audio'},flac:{i:'🎵',l:'FLAC',v:'audio'},ogg:{i:'🎵',l:'OGG',v:'audio'},m4a:{i:'🎵',l:'M4A',v:'audio'},aac:{i:'🎵',l:'AAC',v:'audio'},
+};
+const EDITABLE=new Set(['code','json','md','html','svg']);
+const BINARY_EXTS=new Set(['jpg','jpeg','png','gif','webp','bmp','ico','tiff','mp4','webm','mkv','mov','avi','mp3','wav','flac','ogg','m4a','aac','pdf','xlsx','xls','ods','docx','doc','pptx','ppt']);
+let isBinaryMode=false;
+const FOLDER_COLORS=['#7c3aed','#0d9488','#d97706','#dc2626','#2563eb','#db2777','#059669','#9333ea'];
+function ftOf(name){const e=name.split('.').pop().toLowerCase();return FT[e]||{i:'📄',l:e.toUpperCase()||'File',v:'unknown'}}
+
+// ─────────────────────────────────────────────
+// State
+// ─────────────────────────────────────────────
+let folders=[];            // [{id,handle,name,color,open}]
+let expandedDirs=new Set(); // scoped paths: folderId+':'+path
+let allHandles=new Map();   // scoped path -> {handle,kind}
+let activeSP=null;          // scoped path of open file
+let currentFH=null;         // current file handle
+let currentFolderID=null;
+let isEditing=false;
+let xlsWb=null;
+let blobs=[];
+let currentToolKey=null; // 'timesheet'|'buildsheet'|'firewall'|null when a Tools workspace item is open
+let favouritesData=[];   // [{id,type,label,icon,sp,folderId,folderName,path,toolKey}]
+
+// Tools workspace ("Matalan Tools")
+const TOOLS_ITEMS=[
+  {key:'timesheet',name:'Timesheet',icon:'📅',badge:'Table'},
+  {key:'buildsheet',name:'Build Sheet',icon:'🧾',badge:'Markdown'},
+  {key:'firewall',name:'Firewall Rules',icon:'🛡️',badge:'Table'},
+  {key:'actiontracker',name:'Action Tracker',icon:'✅',badge:'Tracker'},
+];
+
+// ─────────────────────────────────────────────
+// Backend API (server/server.js — run with: cd server && npm install && node server.js)
+// ─────────────────────────────────────────────
+const API_BASE='http://localhost:3420/api';
+async function apiGet(path){
+  const r=await fetch(API_BASE+path);
+  if(!r.ok)throw new Error('API error '+r.status);
+  return r.json();
+}
+async function apiPost(path,body){
+  const r=await fetch(API_BASE+path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  if(!r.ok)throw new Error('API error '+r.status);
+  return r.json();
+}
+async function apiPut(path,body){
+  const r=await fetch(API_BASE+path,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  if(!r.ok)throw new Error('API error '+r.status);
+  return r.json();
+}
+async function apiDelete(path){
+  const r=await fetch(API_BASE+path,{method:'DELETE'});
+  if(!r.ok)throw new Error('API error '+r.status);
+  return r.json();
+}
+function backendErrorHTML(msg){
+  return `<div class="no-view"><div class="no-icon">🔌</div><h3>Backend not reachable</h3><p>${esc(msg||'Could not connect to the local server.')}</p><p style="margin-top:10px">Start it with:</p><p style="margin-top:6px"><code style="background:#21262d;padding:6px 10px;border-radius:6px;display:inline-block;color:#a5d6ff">cd server &amp;&amp; npm install &amp;&amp; node server.js</code></p><button onclick="openToolFile(currentToolKey)" style="margin-top:18px;background:var(--accent);color:#fff;border:none;padding:8px 18px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">Retry</button></div>`;
+}
+const FIREWALL_COLUMNS=[
+  {key:'ruleId',label:'Rule ID',w:90},
+  {key:'change',label:'Change',w:90},
+  {key:'projectCode',label:'Project Code',w:110},
+  {key:'sourceIp',label:'Source IP',w:120},
+  {key:'sourceDesc',label:'Source Desc',w:150},
+  {key:'destIp',label:'Destination IP',w:120},
+  {key:'destDesc',label:'Destination Desc',w:150},
+  {key:'port',label:'Port',w:70},
+  {key:'protocol',label:'Protocol',w:90},
+  {key:'condition',label:'Condition',w:130},
+  {key:'status',label:'Status',w:120},
+  {key:'notes',label:'Notes',w:220},
+];
+function defaultToolContent(key){
+  if(key==='buildsheet')return '# Build Sheet\n\n## Environment\n\n- \n\n## Steps\n\n1. \n';
+  return '';
+}
+
+// ─────────────────────────────────────────────
+// IndexedDB — persist opened folder handles
+// ─────────────────────────────────────────────
+const FV_DB='fileview-workspace',FV_STORE='folders';
+function dbOpen(){
+  return new Promise((res,rej)=>{
+    const req=indexedDB.open(FV_DB,1);
+    req.onupgradeneeded=()=>{if(!req.result.objectStoreNames.contains(FV_STORE))req.result.createObjectStore(FV_STORE,{keyPath:'id'});};
+    req.onsuccess=()=>res(req.result);
+    req.onerror=()=>rej(req.error);
+  });
+}
+async function dbSaveFolder(entry){
+  const db=await dbOpen();
+  return new Promise((res,rej)=>{
+    const tx=db.transaction(FV_STORE,'readwrite');
+    tx.objectStore(FV_STORE).put(entry);
+    tx.oncomplete=()=>res();tx.onerror=()=>rej(tx.error);
+  });
+}
+async function dbDeleteFolder(id){
+  const db=await dbOpen();
+  return new Promise((res,rej)=>{
+    const tx=db.transaction(FV_STORE,'readwrite');
+    tx.objectStore(FV_STORE).delete(id);
+    tx.oncomplete=()=>res();tx.onerror=()=>rej(tx.error);
+  });
+}
+async function dbGetAllFolders(){
+  const db=await dbOpen();
+  return new Promise((res,rej)=>{
+    const tx=db.transaction(FV_STORE,'readonly');
+    const req=tx.objectStore(FV_STORE).getAll();
+    req.onsuccess=()=>res(req.result||[]);
+    req.onerror=()=>rej(req.error);
+  });
+}
+
+// ─────────────────────────────────────────────
+// Folder management
+// ─────────────────────────────────────────────
+async function addFolder(){
+  if(!window.showDirectoryPicker){
+    alert('File System Access API required.\nPlease use Chrome or Edge 86+.');return;
+  }
+  try{
+    const handle=await window.showDirectoryPicker({mode:'readwrite'});
+    const id=Date.now().toString(36)+Math.random().toString(36).slice(2,5);
+    const color=FOLDER_COLORS[folders.length%FOLDER_COLORS.length];
+    folders.push({id,handle,name:handle.name,color,open:true,needsPermission:false});
+    document.querySelector('.empty-sb')?.remove();
+    await appendFolderSection(id);
+    updateHdrInfo();
+    try{await dbSaveFolder({id,name:handle.name,color,handle});}catch(e){console.warn('Could not persist folder',e);}
+  }catch(e){if(e.name!=='AbortError')console.error(e)}
+}
+
+async function restoreFolders(){
+  let stored=[];
+  try{stored=await dbGetAllFolders();}catch(e){console.warn('IndexedDB unavailable',e);}
+  for(const entry of stored){
+    let perm='prompt';
+    try{perm=await entry.handle.queryPermission({mode:'readwrite'});}catch{}
+    folders.push({id:entry.id,handle:entry.handle,name:entry.name,color:entry.color,open:true,needsPermission:perm!=='granted'});
+    document.querySelector('.empty-sb')?.remove();
+    await appendFolderSection(entry.id);
+  }
+  updateHdrInfo();
+}
+
+async function reconnectFolder(id){
+  const f=folders.find(x=>x.id===id);if(!f)return;
+  try{
+    const perm=await f.handle.requestPermission({mode:'readwrite'});
+    if(perm==='granted'){
+      f.needsPermission=false;
+      await refreshFolder(id);
+    }else{
+      alert('Permission was not granted.');
+    }
+  }catch(e){alert('Reconnect failed: '+e.message);}
+}
+
+function updateHdrInfo(){
+  const el=document.getElementById('hdr-info');
+  if(!folders.length){el.textContent='No folder open';return;}
+  el.textContent=folders.length===1?folders[0].name:`${folders.length} folders open`;
+}
+
+async function appendFolderSection(id){
+  const f=folders.find(x=>x.id===id);if(!f)return;
+  const sec=document.createElement('div');
+  sec.className='fsec';sec.id='fsec-'+id;
+  sec.innerHTML=`
+    <div class="fhdr" id="fhdr-${id}" style="padding-left:8px">
+      <button class="fhdr-chev open">▶</button>
+      <span class="fhdr-dot" style="background:${f.color}"></span>
+      <span class="fhdr-name" title="${esc(f.name)}">${esc(f.name)}</span>
+      <div class="fhdr-acts">
+        <button class="fhdr-btn" data-action="add-root" data-fid="${id}" title="New file/folder here">+</button>
+        <button class="fhdr-btn del" data-action="remove-folder" data-fid="${id}" title="Remove from workspace">✕</button>
+      </div>
+    </div>
+    <div class="ftree" id="ftree-${id}"></div>`;
+  const hdr=sec.querySelector('.fhdr');
+  hdr.addEventListener('click',e=>{if(!e.target.closest('.fhdr-acts'))toggleFolderSection(id);});
+  document.getElementById('tree').appendChild(sec);
+  const ftreeEl=document.getElementById('ftree-'+id);
+  if(f.needsPermission){
+    ftreeEl.innerHTML=`<div class="reconnect-wrap"><button class="reconnect-btn" data-action="reconnect" data-fid="${id}">🔒 Click to reconnect</button></div>`;
+    return;
+  }
+  const children=await getChildren(f.handle);
+  await buildNodes(ftreeEl,children,id,f.handle,'',0);
+}
+
+function toggleFolderSection(id){
+  const f=folders.find(x=>x.id===id);if(!f)return;
+  f.open=!f.open;
+  document.getElementById('ftree-'+id).style.display=f.open?'':'none';
+  const chev=document.querySelector(`#fhdr-${id} .fhdr-chev`);
+  if(chev)chev.classList.toggle('open',f.open);
+}
+
+async function removeFolder(id){
+  folders=folders.filter(f=>f.id!==id);
+  for(const k of [...allHandles.keys()])if(k.startsWith(id+':'))allHandles.delete(k);
+  for(const k of [...expandedDirs])if(k.startsWith(id+':'))expandedDirs.delete(k);
+  document.getElementById('fsec-'+id)?.remove();
+  if(activeSP?.startsWith(id+':')){
+    activeSP=null;currentFH=null;currentToolKey=null;
+    document.getElementById('c-hdr').style.display='none';
+    setView(`<div class="welcome"><div class="w-icon">📂</div><h2>Folder removed</h2><p>Select a file from another folder.</p></div>`);
+  }
+  if(!folders.length&&!document.querySelector('.empty-sb')){
+    const empty=document.createElement('div');
+    empty.className='empty-sb';
+    empty.innerHTML=`<div class="e-icon">🗂</div><p>Click <strong>Open Folder</strong> to add folders.<br>You can open multiple folders at once.</p>`;
+    document.getElementById('tree').appendChild(empty);
+  }
+  updateHdrInfo();
+  try{await dbDeleteFolder(id);}catch{}
+}
+
+async function refreshFolder(id){
+  const f=folders.find(x=>x.id===id);if(!f)return;
+  const treeEl=document.getElementById('ftree-'+id);if(!treeEl)return;
+  treeEl.innerHTML='';
+  for(const k of [...allHandles.keys()])if(k.startsWith(id+':'))allHandles.delete(k);
+  const children=await getChildren(f.handle);
+  await buildNodes(treeEl,children,id,f.handle,'',0);
+}
+
+// ─────────────────────────────────────────────
+// Tree building
+// ─────────────────────────────────────────────
+async function getChildren(dh){
+  const e=[];
+  for await(const[name,handle]of dh){
+    if(name.startsWith('.'))continue;
+    e.push({name,handle,kind:handle.kind});
+  }
+  e.sort((a,b)=>{
+    if(a.kind!==b.kind)return a.kind==='directory'?-1:1;
+    return a.name.localeCompare(b.name,undefined,{sensitivity:'base'});
+  });
+  return e;
+}
+
+async function buildNodes(container,entries,folderId,parentDH,basePath,depth){
+  for(const e of entries){
+    const path=basePath?basePath+'/'+e.name:e.name;
+    const sp=folderId+':'+path;
+    allHandles.set(sp,{handle:e.handle,kind:e.kind});
+    const isExp=expandedDirs.has(sp);
+    const row=document.createElement('div');
+    row.className='tree-item '+(e.kind==='directory'?'dir':'file')+(activeSP===sp?' active':'');
+    row.dataset.sp=sp;
+    row.style.paddingLeft=(8+depth*14)+'px';
+    const fav=isFavourite(sp);
+    const favBtn=`<span class="item-fav${fav?' active':''}" data-sp="${sp}" data-kind="${e.kind}" title="${fav?'Remove from favourites':'Add to favourites'}">${fav?'★':'☆'}</span>`;
+    const delBtn=`<span class="item-del" data-sp="${sp}" title="Delete">🗑</span>`;
+    if(e.kind==='directory'){
+      row.innerHTML=`<span class="ti-chev ${isExp?'open':''}">▶</span><span class="ti-icon">${isExp?'📂':'📁'}</span><span class="ti-name">${esc(e.name)}</span><span class="dir-acts"><span class="dir-add" data-sp="${sp}" data-depth="${depth}" title="New file/folder">+</span></span><span class="item-acts">${favBtn}${delBtn}</span>`;
+      const dh=e.handle;
+      row.addEventListener('click',ev=>{if(!ev.target.closest('.dir-acts')&&!ev.target.closest('.item-acts'))toggleDir(row,dh,folderId,path,depth);});
+    }else{
+      const f=ftOf(e.name);
+      row.innerHTML=`<span class="ti-chev"></span><span class="ti-icon">${f.i}</span><span class="ti-name">${esc(e.name)}</span><span class="item-acts">${favBtn}${delBtn}</span>`;
+      const h=e.handle;
+      row.addEventListener('click',ev=>{if(!ev.target.closest('.item-acts'))openFile(h,folderId,path);});
+    }
+    container.appendChild(row);
+    if(e.kind==='directory'&&isExp){
+      const kids=document.createElement('div');
+      kids.dataset.kidsOf=sp;
+      container.appendChild(kids);
+      const ch=await getChildren(e.handle);
+      await buildNodes(kids,ch,folderId,e.handle,path,depth+1);
+    }
+  }
+}
+
+async function toggleDir(row,dh,folderId,path,depth){
+  const sp=folderId+':'+path;
+  if(expandedDirs.has(sp)){
+    expandedDirs.delete(sp);
+    row.querySelector('.ti-chev').className='ti-chev';
+    row.querySelector('.ti-icon').textContent='📁';
+    document.querySelector(`[data-kids-of="${CSS.escape(sp)}"]`)?.remove();
+  }else{
+    expandedDirs.add(sp);
+    row.querySelector('.ti-chev').className='ti-chev open';
+    row.querySelector('.ti-icon').textContent='📂';
+    const kids=document.createElement('div');
+    kids.dataset.kidsOf=sp;
+    row.after(kids);
+    const ch=await getChildren(dh);
+    await buildNodes(kids,ch,folderId,dh,path,depth+1);
+  }
+}
+
+// ─────────────────────────────────────────────
+// Inline create file / folder
+// ─────────────────────────────────────────────
+function showCreateRow(insertTarget,mode,folderId,dirSP,dirHandle,itemDepth){
+  document.querySelectorAll('.create-row').forEach(r=>r.remove());
+  let ctype='file';
+  const row=document.createElement('div');
+  row.className='tree-item create-row';
+  row.style.paddingLeft=(8+itemDepth*14)+'px';
+  row.innerHTML=`<button class="cr-toggle" title="Toggle file/folder">📄</button><input class="cr-input" type="text" placeholder="filename.ext" autocomplete="off" spellcheck="false"/><button class="cr-ok" title="Create (Enter)">↵</button><button class="cr-cancel" title="Cancel (Esc)">✕</button>`;
+  const tog=row.querySelector('.cr-toggle');
+  const inp=row.querySelector('.cr-input');
+  const ok=row.querySelector('.cr-ok');
+  const can=row.querySelector('.cr-cancel');
+  tog.addEventListener('click',e=>{
+    e.stopPropagation();
+    ctype=ctype==='file'?'folder':'file';
+    tog.textContent=ctype==='file'?'📄':'📁';
+    inp.placeholder=ctype==='file'?'filename.ext':'folder-name';
+    inp.focus();
+  });
+  const doCreate=()=>{
+    const name=inp.value.trim();
+    if(!name){inp.focus();return;}
+    performCreate(folderId,dirHandle,dirSP,name,ctype,row);
+  };
+  inp.addEventListener('keydown',e=>{
+    e.stopPropagation();
+    if(e.key==='Enter'){e.preventDefault();doCreate();}
+    if(e.key==='Escape'){row.remove();}
+  });
+  ok.addEventListener('click',e=>{e.stopPropagation();doCreate();});
+  can.addEventListener('click',e=>{e.stopPropagation();row.remove();});
+  if(mode==='prepend'){
+    if(insertTarget.firstChild)insertTarget.insertBefore(row,insertTarget.firstChild);
+    else insertTarget.appendChild(row);
+  }else{
+    insertTarget.after(row);
+  }
+  requestAnimationFrame(()=>inp.focus());
+}
+
+async function performCreate(folderId,dirHandle,dirSP,name,type,inputRow){
+  try{
+    const opts={mode:'readwrite'};
+    if(await dirHandle.queryPermission(opts)!=='granted'){
+      if(await dirHandle.requestPermission(opts)!=='granted'){
+        alert('Write permission was denied.');return;
+      }
+    }
+    if(type==='file'){
+      const nh=await dirHandle.getFileHandle(name,{create:true});
+      const w=await nh.createWritable();await w.write('');await w.close();
+    }else{
+      await dirHandle.getDirectoryHandle(name,{create:true});
+    }
+    inputRow.remove();
+    // Expand parent dir in tree
+    if(dirSP&&dirSP!==folderId+':'){expandedDirs.add(dirSP);}
+    await refreshFolder(folderId);
+    // Auto-open new file
+    if(type==='file'){
+      const dirPath=dirSP.replace(folderId+':','');
+      const newPath=dirPath?dirPath+'/'+name:name;
+      const newSP=folderId+':'+newPath;
+      const entry=allHandles.get(newSP);
+      if(entry)openFile(entry.handle,folderId,newPath);
+    }
+  }catch(e){alert('Failed to create: '+e.message);}
+}
+
+// ─────────────────────────────────────────────
+// Event delegation (sidebar buttons)
+// ─────────────────────────────────────────────
+document.getElementById('tree').addEventListener('click',e=>{
+  const btn=e.target.closest('[data-action]');
+  const dadd=e.target.closest('.dir-add');
+  const fav=e.target.closest('.item-fav');
+  const del=e.target.closest('.item-del');
+  if(btn){
+    const act=btn.dataset.action,fid=btn.dataset.fid;
+    if(act==='add-root'){
+      e.stopPropagation();
+      const f=folders.find(x=>x.id===fid);if(!f)return;
+      const ftree=document.getElementById('ftree-'+fid);
+      showCreateRow(ftree,'prepend',fid,fid+':',f.handle,0);
+    }else if(act==='remove-folder'){
+      e.stopPropagation();removeFolder(fid);
+    }else if(act==='reconnect'){
+      e.stopPropagation();reconnectFolder(fid);
+    }
+  }else if(fav){
+    e.stopPropagation();
+    if(fav.dataset.favId)removeFavouriteById(fav.dataset.favId);
+    else toggleFavourite(fav.dataset.sp,fav.dataset.kind);
+  }else if(del){
+    e.stopPropagation();
+    deleteItem(del.dataset.sp);
+  }else if(dadd){
+    e.stopPropagation();
+    const sp=dadd.dataset.sp;
+    const depth=parseInt(dadd.dataset.depth)||0;
+    const entry=allHandles.get(sp);
+    if(!entry||entry.kind!=='directory')return;
+    const fid=sp.split(':')[0];
+    const kidsEl=document.querySelector(`[data-kids-of="${CSS.escape(sp)}"]`);
+    const dirRow=document.querySelector(`[data-sp="${CSS.escape(sp)}"]`);
+    if(kidsEl)showCreateRow(kidsEl,'prepend',fid,sp,entry.handle,depth+1);
+    else showCreateRow(dirRow,'after',fid,sp,entry.handle,depth+1);
+  }
+});
+
+// ─────────────────────────────────────────────
+// Delete file/folder (sidebar) with confirmation
+// ─────────────────────────────────────────────
+async function deleteItem(sp){
+  const entry=allHandles.get(sp);
+  if(!entry)return;
+  const folderId=sp.split(':')[0];
+  const path=sp.slice(folderId.length+1);
+  const name=path.split('/').pop();
+  const parentPath=path.includes('/')?path.slice(0,path.lastIndexOf('/')):'';
+  const folder=folders.find(f=>f.id===folderId);
+  if(!folder)return;
+  const kindLabel=entry.kind==='directory'?'folder':'file';
+  if(!confirm(`Are you sure you want to delete the ${kindLabel} "${name}"?${entry.kind==='directory'?' All its contents will also be deleted.':''} This cannot be undone.`))return;
+  try{
+    const opts={mode:'readwrite'};
+    let parentHandle=folder.handle;
+    if(parentPath){
+      const parentEntry=allHandles.get(folderId+':'+parentPath);
+      if(parentEntry)parentHandle=parentEntry.handle;
+    }
+    if(await parentHandle.queryPermission(opts)!=='granted'){
+      if(await parentHandle.requestPermission(opts)!=='granted'){alert('Write permission was denied.');return;}
+    }
+    await parentHandle.removeEntry(name,{recursive:true});
+    await removeFavouriteBySp(sp);
+    if(activeSP===sp){
+      activeSP=null;currentFH=null;currentToolKey=null;
+      document.getElementById('c-hdr').style.display='none';
+      setView('');
+    }
+    await rebuildAllTrees();
+  }catch(e){alert('Failed to delete: '+e.message);}
+}
+
+// ─────────────────────────────────────────────
+// Search (across all folders)
+// ─────────────────────────────────────────────
+let searchTid=null;
+function handleSearch(q){
+  clearTimeout(searchTid);
+  searchTid=setTimeout(()=>q.trim()?doSearch(q.trim()):rebuildAllTrees(),280);
+}
+async function rebuildAllTrees(){
+  const tree=document.getElementById('tree');
+  tree.innerHTML='';
+  renderToolsSection();
+  renderFavouritesSection();
+  if(!folders.length){
+    const empty=document.createElement('div');
+    empty.className='empty-sb';
+    empty.innerHTML=`<div class="e-icon">🗂</div><p>Click <strong>Open Folder</strong> to add folders.<br>You can open multiple folders at once.</p>`;
+    tree.appendChild(empty);
+    return;
+  }
+  for(const f of folders)await appendFolderSection(f.id);
+}
+async function doSearch(q){
+  const lo=q.toLowerCase();
+  const results=[];
+  TOOLS_ITEMS.forEach(t=>{
+    if(t.name.toLowerCase().includes(lo))results.push({name:t.name,path:'',folderId:'tools',folderName:'Tools',kind:'tool',toolKey:t.key,icon:t.icon,sp:'tools:'+t.key});
+  });
+  for(const f of folders){if(!f.needsPermission)await walkSearch(f.handle,'',f.id,f.name,lo,results);}
+  const tree=document.getElementById('tree');
+  tree.innerHTML='';
+  if(!results.length){
+    tree.innerHTML=`<div class="empty-sb"><div class="e-icon" style="font-size:26px">🔍</div><p>No files or folders match <strong>"${esc(q)}"</strong></p></div>`;
+    return;
+  }
+  const wrap=document.createElement('div');
+  const hdr=document.createElement('div');
+  hdr.style.cssText='font-size:11px;color:var(--text3);padding:8px 12px 4px;font-weight:600';
+  hdr.textContent=`${Math.min(results.length,300)} result${results.length!==1?'s':''} for "${q}"`;
+  wrap.appendChild(hdr);
+  results.slice(0,300).forEach(r=>{
+    const isDir=r.kind==='directory';
+    const isTool=r.kind==='tool';
+    const icon=isTool?r.icon:(isDir?'📁':ftOf(r.name).i);
+    const row=document.createElement('div');
+    row.className='tree-item '+(isDir?'dir':'file')+(activeSP===r.sp?' active':'');
+    row.dataset.sp=r.sp;
+    row.style.paddingLeft='8px';
+    const dir=r.path&&r.path.includes('/')?r.path.slice(0,r.path.lastIndexOf('/')):'';
+    let sub=esc(r.folderName);
+    if(dir)sub+='/'+esc(dir);
+    if(isDir)sub+=' (folder)';
+    row.innerHTML=`<span class="ti-chev"></span><span class="ti-icon">${icon}</span><div style="flex:1;min-width:0"><div class="ti-name">${hlText(r.name,lo)}</div><div style="font-size:11px;color:var(--text3);overflow:hidden;text-overflow:ellipsis">${sub}</div></div>`;
+    if(isTool)row.addEventListener('click',()=>openToolFile(r.toolKey));
+    else if(isDir)row.addEventListener('click',()=>gotoDirectory(r.folderId,r.path));
+    else row.addEventListener('click',()=>openFile(r.handle,r.folderId,r.path));
+    wrap.appendChild(row);
+  });
+  tree.appendChild(wrap);
+}
+async function walkSearch(dh,base,folderId,folderName,q,results){
+  for await(const[name,handle]of dh){
+    if(name.startsWith('.'))continue;
+    const path=base?base+'/'+name:name;
+    if(name.toLowerCase().includes(q))results.push({name,path,handle,folderId,folderName,kind:handle.kind,sp:folderId+':'+path});
+    if(handle.kind==='directory')await walkSearch(handle,path,folderId,folderName,q,results);
+  }
+}
+function expandAncestors(folderId,path){
+  const parts=path.split('/');
+  let cur='';
+  for(const p of parts){
+    cur=cur?cur+'/'+p:p;
+    expandedDirs.add(folderId+':'+cur);
+  }
+}
+async function gotoDirectory(folderId,path){
+  document.getElementById('srch').value='';
+  expandAncestors(folderId,path);
+  await rebuildAllTrees();
+  const sp=folderId+':'+path;
+  const row=document.querySelector(`[data-sp="${CSS.escape(sp)}"]`);
+  if(row){
+    row.scrollIntoView({block:'center'});
+    row.classList.add('flash');
+    setTimeout(()=>row.classList.remove('flash'),1200);
+  }
+}
+
+// ─────────────────────────────────────────────
+// Matalan Tools workspace (permanent — Timesheet, Build Sheet, Firewall Rules)
+// ─────────────────────────────────────────────
+function renderToolsSection(){
+  const sec=document.createElement('div');
+  sec.className='fsec';sec.id='fsec-tools';
+  sec.innerHTML=`
+    <div class="fhdr" id="fhdr-tools" style="padding-left:8px">
+      <button class="fhdr-chev open">▶</button>
+      <span class="fhdr-dot" style="background:#f59e0b"></span>
+      <span class="fhdr-name">Matalan Tools</span>
+    </div>
+    <div class="ftree" id="ftree-tools"></div>`;
+  const hdr=sec.querySelector('.fhdr');
+  hdr.addEventListener('click',()=>{
+    const ftree=document.getElementById('ftree-tools');
+    const open=ftree.style.display!=='none';
+    ftree.style.display=open?'none':'';
+    hdr.querySelector('.fhdr-chev').classList.toggle('open',!open);
+  });
+  document.getElementById('tree').appendChild(sec);
+  const ftree=document.getElementById('ftree-tools');
+  TOOLS_ITEMS.forEach(it=>{
+    const sp='tools:'+it.key;
+    const fav=isFavourite(sp);
+    const row=document.createElement('div');
+    row.className='tree-item file'+(activeSP===sp?' active':'');
+    row.dataset.sp=sp;
+    row.style.paddingLeft='8px';
+    row.innerHTML=`<span class="ti-chev"></span><span class="ti-icon">${it.icon}</span><span class="ti-name">${esc(it.name)}</span><span class="item-acts"><span class="item-fav${fav?' active':''}" data-sp="${sp}" data-kind="tool" title="${fav?'Remove from favourites':'Add to favourites'}">${fav?'★':'☆'}</span></span>`;
+    row.addEventListener('click',e=>{if(!e.target.closest('.item-acts'))openToolFile(it.key);});
+    ftree.appendChild(row);
+  });
+}
+
+// ─────────────────────────────────────────────
+// Favourites
+// ─────────────────────────────────────────────
+function isFavourite(sp){return favouritesData.some(f=>f.sp===sp);}
+
+async function loadFavourites(){
+  try{favouritesData=await apiGet('/favourites');}catch{favouritesData=[];}
+}
+
+function renderFavouritesSection(){
+  const sec=document.createElement('div');
+  sec.className='fsec';sec.id='fsec-favourites';
+  sec.innerHTML=`
+    <div class="fhdr" id="fhdr-favourites" style="padding-left:8px">
+      <button class="fhdr-chev open">▶</button>
+      <span class="fhdr-dot" style="background:#fbbf24"></span>
+      <span class="fhdr-name">Favourites</span>
+    </div>
+    <div class="ftree" id="ftree-favourites"></div>`;
+  const hdr=sec.querySelector('.fhdr');
+  hdr.addEventListener('click',()=>{
+    const ftree=document.getElementById('ftree-favourites');
+    const open=ftree.style.display!=='none';
+    ftree.style.display=open?'none':'';
+    hdr.querySelector('.fhdr-chev').classList.toggle('open',!open);
+  });
+  document.getElementById('tree').appendChild(sec);
+  const ftree=document.getElementById('ftree-favourites');
+  if(!favouritesData.length){
+    ftree.innerHTML=`<div style="padding:8px 12px;font-size:11px;color:var(--text3);line-height:1.6">Hover any file or folder and click ☆ to pin it here.</div>`;
+    return;
+  }
+  favouritesData.forEach(fav=>{
+    const sp=fav.sp;
+    const row=document.createElement('div');
+    row.className='tree-item '+(fav.type==='directory'?'dir':'file')+(activeSP===sp?' active':'');
+    row.dataset.sp=sp;
+    row.style.paddingLeft='8px';
+    row.innerHTML=`<span class="ti-chev"></span><span class="ti-icon">${esc(fav.icon||'📄')}</span><span class="ti-name">${esc(fav.label)}</span><span class="item-acts"><span class="item-fav active" data-fav-id="${fav.id}" title="Remove from favourites">★</span></span>`;
+    row.addEventListener('click',e=>{if(!e.target.closest('.item-acts'))openFavouriteItem(fav);});
+    ftree.appendChild(row);
+  });
+}
+
+async function toggleFavourite(sp,kind){
+  const existing=favouritesData.find(f=>f.sp===sp);
+  if(existing){await removeFavouriteById(existing.id);return;}
+  let payload;
+  if(kind==='tool'){
+    const toolKey=sp.split(':')[1];
+    const meta=TOOLS_ITEMS.find(t=>t.key===toolKey);
+    payload={type:'tool',label:meta.name,icon:meta.icon,sp,toolKey};
+  }else{
+    const folderId=sp.split(':')[0];
+    const path=sp.slice(folderId.length+1);
+    const name=path.split('/').pop();
+    const folder=folders.find(f=>f.id===folderId);
+    const icon=kind==='directory'?'📁':ftOf(name).i;
+    payload={type:kind,label:name,icon,sp,folderId,folderName:folder?.name||'',path};
+  }
+  try{
+    const fav=await apiPost('/favourites',payload);
+    favouritesData.push(fav);
+    rebuildAllTrees();
+  }catch(e){alert('Could not add favourite (is the backend running?): '+e.message);}
+}
+async function removeFavouriteById(id){
+  id=Number(id);
+  try{await apiDelete('/favourites/'+id);}catch(e){alert('Could not remove favourite: '+e.message);return;}
+  favouritesData=favouritesData.filter(f=>f.id!==id);
+  rebuildAllTrees();
+}
+async function removeFavouriteBySp(sp){
+  const existing=favouritesData.find(f=>f.sp===sp);
+  if(!existing)return;
+  try{await apiDelete('/favourites/'+existing.id);}catch{}
+  favouritesData=favouritesData.filter(f=>f.id!==existing.id);
+}
+
+async function openFavouriteItem(fav){
+  if(fav.type==='tool'){openToolFile(fav.toolKey);return;}
+  const folder=folders.find(f=>f.id===fav.folderId);
+  if(!folder){alert(`Folder "${fav.folderName}" is not currently open. Open it first to access this favourite.`);return;}
+  if(fav.type==='directory'){await gotoDirectory(fav.folderId,fav.path);return;}
+  const dirPath=fav.path.includes('/')?fav.path.slice(0,fav.path.lastIndexOf('/')):'';
+  if(dirPath)expandAncestors(fav.folderId,dirPath);
+  await refreshFolder(fav.folderId);
+  const sp=fav.folderId+':'+fav.path;
+  const entry=allHandles.get(sp);
+  if(!entry){alert('This file could not be found — it may have been moved, renamed, or deleted.');return;}
+  openFile(entry.handle,fav.folderId,fav.path);
+}
+
+async function openToolFile(key){
+  if(isEditing)cancelEdit();
+  const sp='tools:'+key;
+  document.querySelectorAll('.tree-item.active').forEach(el=>el.classList.remove('active'));
+  const row=document.querySelector(`[data-sp="${CSS.escape(sp)}"]`);
+  if(row){row.classList.add('active');row.scrollIntoView({block:'nearest'});}
+  activeSP=sp;currentFH=null;currentFolderID='tools';currentToolKey=key;
+  const meta=TOOLS_ITEMS.find(t=>t.key===key);
+  const hdr=document.getElementById('c-hdr');hdr.style.display='flex';
+  document.getElementById('c-icon').textContent=meta.icon;
+  document.getElementById('c-name').textContent=meta.name;
+  document.getElementById('c-badge').textContent=meta.badge;
+  document.getElementById('c-path').textContent='Matalan Tools workspace';
+  if(key==='firewall'){
+    document.getElementById('edit-btn').style.display='none';
+    renderFirewallTable();
+  }else if(key==='timesheet'){
+    document.getElementById('edit-btn').style.display='none';
+    renderTimesheetTable();
+  }else if(key==='actiontracker'){
+    document.getElementById('edit-btn').style.display='none';
+    renderActionTracker();
+  }else{
+    document.getElementById('edit-btn').style.display='inline-block';
+    const stored=localStorage.getItem('fv-tool-'+key);
+    const text=stored!==null?stored:defaultToolContent(key);
+    setView(`<div class="md">${marked.parse(text)}</div>`);
+    document.querySelectorAll('.md pre code').forEach(el=>hljs.highlightElement(el));
+  }
+}
+
+// ─────────────────────────────────────────────
+// Firewall Rules table editor (backend-backed)
+// ─────────────────────────────────────────────
+let fwRules=[];
+let fwSelected=new Set();
+let fwEditingId=null;
+let fwFilters={search:'',ruleId:'',projectCode:'',change:'',port:''};
+
+async function renderFirewallTable(){
+  setView('<div style="padding:20px;color:var(--text3)">Loading firewall rules…</div>');
+  try{
+    fwRules=await apiGet('/firewall-rules');
+  }catch(e){
+    setView(backendErrorHTML(e.message));
+    return;
+  }
+  drawFirewallTable();
+}
+
+function getFilteredFwRows(){
+  let rows=fwRules;
+  const f=fwFilters;
+  if(f.ruleId)rows=rows.filter(r=>(r.ruleId||'').toLowerCase().includes(f.ruleId.toLowerCase()));
+  if(f.projectCode)rows=rows.filter(r=>(r.projectCode||'').toLowerCase().includes(f.projectCode.toLowerCase()));
+  if(f.change)rows=rows.filter(r=>(r.change||'').toLowerCase().includes(f.change.toLowerCase()));
+  if(f.port)rows=rows.filter(r=>(r.port||'').toLowerCase().includes(f.port.toLowerCase()));
+  if(f.search){
+    const q=f.search.toLowerCase();
+    rows=rows.filter(r=>FIREWALL_COLUMNS.some(c=>String(r[c.key]||'').toLowerCase().includes(q)));
+  }
+  return rows;
+}
+function setFwFilter(key,val){fwFilters[key]=val;drawFirewallTable();}
+function clearFwFilters(){fwFilters={search:'',ruleId:'',projectCode:'',change:'',port:''};drawFirewallTable();}
+
+function toggleFwSelect(id,checked){
+  if(checked)fwSelected.add(id);else fwSelected.delete(id);
+  drawFirewallTable();
+}
+function toggleFwSelectAll(checked){
+  const rows=getFilteredFwRows();
+  if(checked)rows.forEach(r=>fwSelected.add(r.id));
+  else rows.forEach(r=>fwSelected.delete(r.id));
+  drawFirewallTable();
+}
+
+function drawFirewallTable(){
+  const cols=FIREWALL_COLUMNS;
+  const rows=getFilteredFwRows();
+  const f=fwFilters;
+  let html=`<div class="fw-toolbar" style="flex-wrap:wrap">
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <input class="fw-filter-input" style="width:180px" placeholder="🔍 Search all columns..." value="${esc(f.search)}" oninput="setFwFilter('search',this.value)"/>
+      <input class="fw-filter-input" placeholder="Rule ID" value="${esc(f.ruleId)}" oninput="setFwFilter('ruleId',this.value)"/>
+      <input class="fw-filter-input" placeholder="Project Code" value="${esc(f.projectCode)}" oninput="setFwFilter('projectCode',this.value)"/>
+      <input class="fw-filter-input" placeholder="Change" value="${esc(f.change)}" oninput="setFwFilter('change',this.value)"/>
+      <input class="fw-filter-input" style="width:80px" placeholder="Port" value="${esc(f.port)}" oninput="setFwFilter('port',this.value)"/>
+      <button class="fw-clear-btn" onclick="clearFwFilters()">Clear filters</button>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <div class="fw-count">${rows.length} of ${fwRules.length} rule${fwRules.length!==1?'s':''}</div>
+      <button class="fw-export-btn" onclick="exportFirewallExcel()">⬇ Export Excel</button>
+      <button class="fw-add-btn" onclick="addFirewallRow()">+ Add Rule</button>
+    </div>
+  </div>`;
+
+  if(fwSelected.size){
+    html+=`<div class="fw-bulkbar">
+      <span>${fwSelected.size} selected</span>
+      <select class="fw-input" id="fw-bulk-status" style="width:140px;border-color:var(--border)">
+        <option value="">Set status…</option>
+        <option value="Implemented">Implemented</option>
+        <option value="Pending">Pending</option>
+      </select>
+      <button class="fw-bulk-btn" onclick="bulkUpdateFirewallStatus()">Apply</button>
+      <button class="fw-bulk-btn danger" onclick="bulkDeleteFirewall()">Delete selected</button>
+      <button class="fw-bulk-btn" onclick="fwSelected.clear();drawFirewallTable()">Clear selection</button>
+    </div>`;
+  }
+
+  html+=`<div class="tbl-wrap"><table class="sheet-tbl fw-tbl"><thead><tr><th style="width:32px"><input type="checkbox" ${rows.length&&rows.every(r=>fwSelected.has(r.id))?'checked':''} onchange="toggleFwSelectAll(this.checked)"/></th>`;
+  cols.forEach(c=>html+=`<th style="min-width:${c.w}px">${esc(c.label)}</th>`);
+  html+=`<th style="width:80px">Actions</th></tr></thead><tbody>`;
+
+  if(!rows.length){
+    html+=`<tr><td colspan="${cols.length+2}" style="text-align:center;color:var(--text3);padding:24px">No firewall rules found.</td></tr>`;
+  }
+
+  rows.forEach(row=>{
+    const editing=fwEditingId===row.id;
+    html+='<tr>';
+    html+=`<td style="text-align:center"><input type="checkbox" ${fwSelected.has(row.id)?'checked':''} onchange="toggleFwSelect(${row.id},this.checked)"/></td>`;
+    cols.forEach(c=>{
+      if(!editing){
+        if(c.key==='status'){
+          const v=row.status||'';
+          const cls=v==='Implemented'?'fw-status-impl':(v==='Pending'?'fw-status-pend':'');
+          html+=`<td>${v?`<span class="fw-status-badge ${cls}">${esc(v)}</span>`:''}</td>`;
+        }else{
+          html+=`<td><div class="fw-cell" title="${esc(row[c.key]||'')}">${esc(row[c.key]||'')}</div></td>`;
+        }
+      }else{
+        if(c.key==='status'){
+          const v=row.status||'';
+          html+=`<td><select class="fw-input" id="fwf-${row.id}-status">
+            <option value=""${v?'':' selected'}></option>
+            <option value="Implemented"${v==='Implemented'?' selected':''}>Implemented</option>
+            <option value="Pending"${v==='Pending'?' selected':''}>Pending</option>
+          </select></td>`;
+        }else{
+          html+=`<td><input class="fw-input" id="fwf-${row.id}-${c.key}" type="text" value="${esc(row[c.key]||'')}"/></td>`;
+        }
+      }
+    });
+    if(!editing){
+      html+=`<td><div style="display:flex;gap:4px"><button class="fw-icon-btn" title="Edit" onclick="editFirewallRow(${row.id})">✏️</button><button class="fw-icon-btn del" title="Delete" onclick="deleteFirewallRow(${row.id})">🗑</button></div></td>`;
+    }else{
+      html+=`<td><div style="display:flex;gap:4px"><button class="fw-icon-btn save" title="Save" onclick="saveFirewallRow(${row.id})">✅</button><button class="fw-icon-btn cancel" title="Cancel" onclick="cancelFirewallEdit(${row.id})">✖</button></div></td>`;
+    }
+    html+='</tr>';
+  });
+  html+='</tbody></table></div>';
+  setView(html);
+}
+
+async function addFirewallRow(){
+  let row;
+  try{row=await apiPost('/firewall-rules',{});}
+  catch(e){alert('Could not add rule (is the backend running?): '+e.message);return;}
+  fwRules.push(row);
+  fwEditingId=row.id;
+  drawFirewallTable();
+}
+function editFirewallRow(id){fwEditingId=id;drawFirewallTable();}
+async function cancelFirewallEdit(id){
+  const row=fwRules.find(r=>r.id===id);
+  fwEditingId=null;
+  const isBlank=row&&FIREWALL_COLUMNS.every(c=>!row[c.key]);
+  if(isBlank){
+    try{await apiDelete('/firewall-rules/'+id);}catch{}
+    fwRules=fwRules.filter(r=>r.id!==id);
+  }
+  drawFirewallTable();
+}
+async function saveFirewallRow(id){
+  const fields={};
+  FIREWALL_COLUMNS.forEach(c=>{
+    const el=document.getElementById(`fwf-${id}-${c.key}`);
+    fields[c.key]=el?el.value:'';
+  });
+  let row;
+  try{row=await apiPut('/firewall-rules/'+id,fields);}
+  catch(e){alert('Could not save rule: '+e.message);return;}
+  const idx=fwRules.findIndex(r=>r.id===id);
+  if(idx>=0)fwRules[idx]=row;
+  fwEditingId=null;
+  drawFirewallTable();
+}
+async function deleteFirewallRow(id){
+  if(!confirm('Delete this firewall rule? This cannot be undone.'))return;
+  try{await apiDelete('/firewall-rules/'+id);}
+  catch(e){alert('Could not delete rule: '+e.message);return;}
+  fwRules=fwRules.filter(r=>r.id!==id);
+  fwSelected.delete(id);
+  drawFirewallTable();
+}
+async function bulkDeleteFirewall(){
+  if(!fwSelected.size)return;
+  if(!confirm(`Delete ${fwSelected.size} selected rule(s)? This cannot be undone.`))return;
+  const ids=[...fwSelected];
+  try{await apiPost('/firewall-rules/bulk-delete',{ids});}
+  catch(e){alert('Could not delete rules: '+e.message);return;}
+  fwRules=fwRules.filter(r=>!fwSelected.has(r.id));
+  fwSelected.clear();
+  drawFirewallTable();
+}
+async function bulkUpdateFirewallStatus(){
+  if(!fwSelected.size)return;
+  const status=document.getElementById('fw-bulk-status').value;
+  if(!status){alert('Choose a status to apply.');return;}
+  const ids=[...fwSelected];
+  try{await apiPost('/firewall-rules/bulk-update',{ids,fields:{status}});}
+  catch(e){alert('Could not update rules: '+e.message);return;}
+  fwRules.forEach(r=>{if(fwSelected.has(r.id))r.status=status;});
+  fwSelected.clear();
+  drawFirewallTable();
+}
+function exportFirewallExcel(){
+  const rows=getFilteredFwRows();
+  const data=rows.map(r=>{
+    const o={};
+    FIREWALL_COLUMNS.forEach(c=>o[c.label]=r[c.key]||'');
+    return o;
+  });
+  const ws=XLSX.utils.json_to_sheet(data);
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'Firewall Rules');
+  XLSX.writeFile(wb,'firewall-rules.xlsx');
+}
+
+// ─────────────────────────────────────────────
+// Timesheet table editor (backend-backed)
+// ─────────────────────────────────────────────
+const TS_DAYS=[['mon','Mon'],['tue','Tue'],['wed','Wed'],['thu','Thu'],['fri','Fri'],['sat','Sat'],['sun','Sun']];
+const TS_MAX_DAILY=7.5;
+let tsRows=[];
+let tsEditingId=null;
+let tsWeekStart=getMonday(new Date());
+
+function getMonday(d){
+  const date=new Date(d);
+  const day=date.getDay();
+  const diff=(day===0?-6:1)-day;
+  date.setDate(date.getDate()+diff);
+  date.setHours(0,0,0,0);
+  return date;
+}
+function fmtDateISO(d){
+  const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),dd=String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${dd}`;
+}
+function fmtDateShort(d){return d.toLocaleDateString(undefined,{month:'short',day:'numeric'});}
+function tsWeekLabel(){
+  const end=new Date(tsWeekStart);end.setDate(end.getDate()+6);
+  return `${fmtDateShort(tsWeekStart)} – ${fmtDateShort(end)}, ${end.getFullYear()}`;
+}
+function shiftTsWeek(delta){
+  tsWeekStart=new Date(tsWeekStart);
+  tsWeekStart.setDate(tsWeekStart.getDate()+delta*7);
+  renderTimesheetTable();
+}
+function tsThisWeek(){tsWeekStart=getMonday(new Date());renderTimesheetTable();}
+function jumpTsWeek(dateStr){
+  if(!dateStr)return;
+  tsWeekStart=getMonday(new Date(dateStr+'T00:00:00'));
+  renderTimesheetTable();
+}
+
+async function renderTimesheetTable(){
+  setView('<div style="padding:20px;color:var(--text3)">Loading timesheet…</div>');
+  try{
+    tsRows=await apiGet('/timesheet?week='+fmtDateISO(tsWeekStart));
+  }catch(e){
+    setView(backendErrorHTML(e.message));
+    return;
+  }
+  drawTimesheetTable();
+}
+
+function drawTimesheetTable(){
+  const weekISO=fmtDateISO(tsWeekStart);
+  let html=`<div class="fw-toolbar">
+    <div style="display:flex;align-items:center;gap:10px">
+      <button class="ts-nav-btn" onclick="shiftTsWeek(-1)" title="Previous week">◀</button>
+      <input type="date" class="fw-filter-input" value="${weekISO}" onchange="jumpTsWeek(this.value)"/>
+      <button class="ts-nav-btn" onclick="shiftTsWeek(1)" title="Next week">▶</button>
+      <button class="fw-clear-btn" onclick="tsThisWeek()">This week</button>
+      <div class="fw-count">Week of ${tsWeekLabel()}</div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="fw-export-btn" onclick="exportTimesheetExcel()">⬇ Export Excel</button>
+      <button class="fw-export-btn" onclick="emailTimesheet()">✉ Email</button>
+      <button class="fw-add-btn" onclick="addTimesheetRow()">+ Add Row</button>
+    </div>
+  </div>`;
+
+  html+=`<div class="tbl-wrap"><table class="sheet-tbl fw-tbl"><thead><tr>
+    <th style="min-width:160px">Project Manager</th>
+    <th style="min-width:120px">Project Code</th>`;
+  TS_DAYS.forEach(([k,label],i)=>{
+    const d=new Date(tsWeekStart);d.setDate(d.getDate()+i);
+    html+=`<th style="min-width:70px">${label}<br><span style="font-weight:400;color:var(--text3)">${fmtDateShort(d)}</span></th>`;
+  });
+  html+=`<th style="min-width:70px">Total</th><th style="min-width:160px">Notes</th><th style="width:80px">Actions</th></tr></thead><tbody>`;
+
+  if(!tsRows.length){
+    html+=`<tr><td colspan="${2+TS_DAYS.length+3}" style="text-align:center;color:var(--text3);padding:24px">No timesheet entries for this week.</td></tr>`;
+  }
+
+  const totals={mon:0,tue:0,wed:0,thu:0,fri:0,sat:0,sun:0};
+  tsRows.forEach(row=>{
+    const editing=tsEditingId===row.id;
+    let rowTotal=0;
+    html+='<tr>';
+    if(!editing){
+      html+=`<td><div class="fw-cell">${esc(row.projectManager||'')}</div></td>`;
+      html+=`<td><div class="fw-cell">${esc(row.projectCode||'')}</div></td>`;
+    }else{
+      html+=`<td><input class="fw-input" id="tsf-${row.id}-projectManager" type="text" value="${esc(row.projectManager||'')}"/></td>`;
+      html+=`<td><input class="fw-input" id="tsf-${row.id}-projectCode" type="text" value="${esc(row.projectCode||'')}"/></td>`;
+    }
+    TS_DAYS.forEach(([k])=>{
+      const v=Number(row[k]||0);
+      rowTotal+=v;totals[k]+=v;
+      const over=v>TS_MAX_DAILY;
+      if(!editing)html+=`<td class="ts-hours${over?' ts-over':''}">${v||''}</td>`;
+      else html+=`<td><input class="fw-input ts-hours" id="tsf-${row.id}-${k}" type="number" min="0" step="0.5" value="${v}"/></td>`;
+    });
+    html+=`<td class="ts-hours" style="font-weight:600">${rowTotal}</td>`;
+    if(!editing){
+      html+=`<td><div class="fw-cell">${esc(row.notes||'')}</div></td>`;
+      html+=`<td><div style="display:flex;gap:4px"><button class="fw-icon-btn" title="Edit" onclick="editTimesheetRow(${row.id})">✏️</button><button class="fw-icon-btn del" title="Delete" onclick="deleteTimesheetRow(${row.id})">🗑</button></div></td>`;
+    }else{
+      html+=`<td><input class="fw-input" id="tsf-${row.id}-notes" type="text" value="${esc(row.notes||'')}"/></td>`;
+      html+=`<td><div style="display:flex;gap:4px"><button class="fw-icon-btn save" title="Save" onclick="saveTimesheetRow(${row.id})">✅</button><button class="fw-icon-btn cancel" title="Cancel" onclick="cancelTimesheetEdit(${row.id})">✖</button></div></td>`;
+    }
+    html+='</tr>';
+  });
+
+  if(tsRows.length){
+    html+='<tr style="font-weight:600;background:#1d2433"><td colspan="2">Daily Total</td>';
+    let grand=0;
+    TS_DAYS.forEach(([k])=>{
+      grand+=totals[k];
+      const over=totals[k]>TS_MAX_DAILY;
+      html+=`<td class="ts-hours${over?' ts-over':''}">${totals[k]||''}</td>`;
+    });
+    html+=`<td class="ts-hours">${grand}</td><td></td><td></td></tr>`;
+  }
+
+  html+='</tbody></table></div>';
+  setView(html);
+}
+
+async function addTimesheetRow(){
+  let row;
+  try{row=await apiPost('/timesheet',{weekStart:fmtDateISO(tsWeekStart)});}
+  catch(e){alert('Could not add row (is the backend running?): '+e.message);return;}
+  tsRows.push(row);
+  tsEditingId=row.id;
+  drawTimesheetTable();
+}
+function editTimesheetRow(id){tsEditingId=id;drawTimesheetTable();}
+async function cancelTimesheetEdit(id){
+  const row=tsRows.find(r=>r.id===id);
+  tsEditingId=null;
+  const isBlank=row&&!row.projectManager&&!row.projectCode&&!row.notes&&TS_DAYS.every(([k])=>!Number(row[k]));
+  if(isBlank){
+    try{await apiDelete('/timesheet/'+id);}catch{}
+    tsRows=tsRows.filter(r=>r.id!==id);
+  }
+  drawTimesheetTable();
+}
+async function saveTimesheetRow(id){
+  const fields={weekStart:fmtDateISO(tsWeekStart)};
+  fields.projectManager=document.getElementById(`tsf-${id}-projectManager`).value;
+  fields.projectCode=document.getElementById(`tsf-${id}-projectCode`).value;
+  TS_DAYS.forEach(([k])=>{fields[k]=Number(document.getElementById(`tsf-${id}-${k}`).value)||0;});
+  fields.notes=document.getElementById(`tsf-${id}-notes`).value;
+  let row;
+  try{row=await apiPut('/timesheet/'+id,fields);}
+  catch(e){alert('Could not save row: '+e.message);return;}
+  const idx=tsRows.findIndex(r=>r.id===id);
+  if(idx>=0)tsRows[idx]=row;
+  tsEditingId=null;
+  drawTimesheetTable();
+}
+async function deleteTimesheetRow(id){
+  if(!confirm('Delete this timesheet entry? This cannot be undone.'))return;
+  try{await apiDelete('/timesheet/'+id);}
+  catch(e){alert('Could not delete row: '+e.message);return;}
+  tsRows=tsRows.filter(r=>r.id!==id);
+  drawTimesheetTable();
+}
+
+function tsDailyTotals(){
+  const totals={mon:0,tue:0,wed:0,thu:0,fri:0,sat:0,sun:0};
+  tsRows.forEach(row=>TS_DAYS.forEach(([k])=>{totals[k]+=Number(row[k]||0);}));
+  return totals;
+}
+
+function exportTimesheetExcel(){
+  const totals=tsDailyTotals();
+  const data=tsRows.map(r=>{
+    const o={'Project Manager':r.projectManager||'','Project Code':r.projectCode||''};
+    let total=0;
+    TS_DAYS.forEach(([k,label])=>{const v=Number(r[k]||0);total+=v;o[label]=v;});
+    o['Total']=total;
+    o['Notes']=r.notes||'';
+    return o;
+  });
+  const totalsRow={'Project Manager':'Daily Total','Project Code':''};
+  let grand=0;
+  TS_DAYS.forEach(([k,label])=>{grand+=totals[k];totalsRow[label]=totals[k];});
+  totalsRow['Total']=grand;totalsRow['Notes']='';
+  data.push(totalsRow);
+  const ws=XLSX.utils.json_to_sheet(data);
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'Timesheet');
+  XLSX.writeFile(wb,`timesheet-${fmtDateISO(tsWeekStart)}.xlsx`);
+}
+
+function emailTimesheet(){
+  const totals=tsDailyTotals();
+  let body=`Timesheet for week of ${tsWeekLabel()}\n\n`;
+  body+='Project Manager | Project Code | '+TS_DAYS.map(([,l])=>l).join(' | ')+' | Total | Notes\n';
+  tsRows.forEach(r=>{
+    let total=0;
+    const days=TS_DAYS.map(([k])=>{const v=Number(r[k]||0);total+=v;return v||0;}).join(' | ');
+    body+=`${r.projectManager||''} | ${r.projectCode||''} | ${days} | ${total} | ${r.notes||''}\n`;
+  });
+  let grand=0;
+  const dayTotals=TS_DAYS.map(([k])=>{grand+=totals[k];return totals[k]||0;}).join(' | ');
+  body+=`\nDaily Total: ${dayTotals} | ${grand}\n`;
+  TS_DAYS.forEach(([k,label])=>{if(totals[k]>TS_MAX_DAILY)body+=`\nWarning: ${label} total (${totals[k]}h) exceeds ${TS_MAX_DAILY}h.`;});
+  body+='\n\n(For a formatted copy, use "Export Excel" and attach the file to this email.)';
+  const subject=encodeURIComponent(`Timesheet - week of ${tsWeekLabel()}`);
+  window.location.href=`mailto:?subject=${subject}&body=${encodeURIComponent(body)}`;
+}
+
+// ─────────────────────────────────────────────
+// Action Tracker (backend-backed)
+// ─────────────────────────────────────────────
+const ACTION_STATUSES=['Not Started','In Progress','Completed','Blocked','On Hold'];
+let atSections=[];
+let atSearch='';
+let atEditing=null; // {type:'section'|'action'|'sub', id}
+let atCollapsedSections=new Set();
+let atExpandedActions=new Set();
+
+function atStatusClass(status){
+  return {'Not Started':'at-status-notstarted','In Progress':'at-status-inprogress','Completed':'at-status-completed','Blocked':'at-status-blocked','On Hold':'at-status-onhold'}[status]||'at-status-notstarted';
+}
+function atIsOverdue(dueDate,status){
+  if(!dueDate||status==='Completed')return false;
+  return dueDate<fmtDateISO(new Date());
+}
+function atFindSection(id){return atSections.find(s=>s.id===id);}
+function atFindAction(id){for(const s of atSections){const a=s.actions.find(x=>x.id===id);if(a)return a;}return null;}
+function atFindSub(id){for(const s of atSections)for(const a of s.actions){const sub=a.subactions.find(x=>x.id===id);if(sub)return sub;}return null;}
+function focusAtField(id){requestAnimationFrame(()=>{const el=document.getElementById(id);if(el){el.focus();if(el.select)el.select();}});}
+
+async function renderActionTracker(){
+  setView('<div style="padding:20px;color:var(--text3)">Loading action tracker…</div>');
+  try{
+    atSections=await apiGet('/action-tracker');
+    atSections.forEach(s=>s.actions.forEach(a=>a.subactions=a.subactions||[]));
+  }catch(e){
+    setView(backendErrorHTML(e.message));
+    return;
+  }
+  drawActionTracker();
+}
+
+function setAtSearch(v){atSearch=v;drawActionTracker();}
+function toggleAtSection(id){
+  if(atCollapsedSections.has(id))atCollapsedSections.delete(id);else atCollapsedSections.add(id);
+  drawActionTracker();
+}
+function toggleAtAction(id){
+  if(atExpandedActions.has(id))atExpandedActions.delete(id);else atExpandedActions.add(id);
+  drawActionTracker();
+}
+
+function atMatch(text,q){return String(text||'').toLowerCase().includes(q);}
+function atItemMatches(item,q){
+  return atMatch(item.title,q)||atMatch(item.owner,q)||atMatch(item.comments,q)||atMatch(item.status,q)||atMatch(item.dueDate,q);
+}
+
+function drawActionTracker(){
+  const q=atSearch.trim().toLowerCase();
+  let html=`<div class="fw-toolbar" style="flex-wrap:wrap">
+    <input class="fw-filter-input" style="width:260px" placeholder="🔍 Search actions, owners, comments..." value="${esc(atSearch)}" oninput="setAtSearch(this.value)"/>
+    <button class="fw-add-btn" onclick="addAtSection()">+ Add Section</button>
+  </div>`;
+
+  let sections=atSections;
+  if(q){
+    sections=atSections.map(sec=>{
+      const secMatch=atMatch(sec.name,q);
+      const actions=sec.actions.map(act=>{
+        const actMatch=atItemMatches(act,q);
+        let subactions=act.subactions;
+        if(!secMatch&&!actMatch){
+          subactions=subactions.filter(s=>atItemMatches(s,q));
+          if(!subactions.length)return null;
+        }
+        return {...act,subactions};
+      }).filter(Boolean);
+      if(!secMatch&&!actions.length)return null;
+      return {...sec,actions};
+    }).filter(Boolean);
+  }
+
+  if(!sections.length){
+    html+=`<div style="text-align:center;color:var(--text3);padding:40px">${q?`No actions match "${esc(atSearch)}"`:'No sections yet. Click "+ Add Section" to get started.'}</div>`;
+    setView(html);
+    return;
+  }
+
+  sections.forEach(sec=>{
+    const collapsed=atCollapsedSections.has(sec.id)&&!q;
+    const editingSec=atEditing&&atEditing.type==='section'&&atEditing.id===sec.id;
+    html+=`<div class="at-section">`;
+    html+=`<div class="at-section-hdr">`;
+    html+=`<span class="ti-chev ${collapsed?'':'open'}" onclick="toggleAtSection(${sec.id})">▶</span>`;
+    if(editingSec){
+      html+=`<input class="fw-input" id="at-sec-${sec.id}-name" type="text" value="${esc(sec.name)}" style="flex:1;font-weight:600"/>`;
+      html+=`<div class="at-acts"><button class="fw-icon-btn save" title="Save" onclick="saveAtSection(${sec.id})">✅</button><button class="fw-icon-btn cancel" title="Cancel" onclick="cancelAtEdit()">✖</button></div>`;
+    }else{
+      html+=`<div class="at-section-name">${hlText(sec.name,q)}</div>`;
+      html+=`<div class="at-acts"><button class="fw-icon-btn" title="Rename section" onclick="editAtSection(${sec.id})">✏️</button><button class="fw-icon-btn del" title="Delete section" onclick="deleteAtSection(${sec.id})">🗑</button><button class="fw-bulk-btn" onclick="addAtAction(${sec.id})">+ Action</button></div>`;
+    }
+    html+=`</div>`;
+    if(!collapsed){
+      html+=`<div class="at-actions-wrap">`;
+      if(!sec.actions.length)html+=`<div style="color:var(--text3);font-size:12px;padding:6px 0 10px">No actions in this section yet.</div>`;
+      sec.actions.forEach(act=>html+=drawAtAction(act,q));
+      html+=`</div>`;
+    }
+    html+=`</div>`;
+  });
+
+  setView(html);
+}
+
+function drawAtAction(act,q){
+  const expanded=atExpandedActions.has(act.id)||!!q;
+  const editing=atEditing&&atEditing.type==='action'&&atEditing.id===act.id;
+  const overdue=atIsOverdue(act.dueDate,act.status);
+  let html=`<div class="at-action">`;
+  html+=`<div class="at-action-hdr">`;
+  html+=`<span class="ti-chev ${expanded?'open':''}" onclick="toggleAtAction(${act.id})">▶</span>`;
+  if(editing){
+    html+=`<div class="at-edit-grid">
+      <input class="fw-input" id="at-act-${act.id}-title" type="text" placeholder="Action title" value="${esc(act.title||'')}"/>
+      <input class="fw-input" id="at-act-${act.id}-owner" type="text" placeholder="Owner" value="${esc(act.owner||'')}"/>
+      <select class="fw-input" id="at-act-${act.id}-status">${ACTION_STATUSES.map(s=>`<option value="${s}"${(act.status||'Not Started')===s?' selected':''}>${s}</option>`).join('')}</select>
+      <input class="fw-input" id="at-act-${act.id}-dueDate" type="date" value="${act.dueDate||''}"/>
+    </div>
+    <div class="at-acts"><button class="fw-icon-btn save" title="Save" onclick="saveAtAction(${act.id})">✅</button><button class="fw-icon-btn cancel" title="Cancel" onclick="cancelAtEdit()">✖</button></div>`;
+  }else{
+    html+=`<div class="at-title">${hlText(act.title||'(untitled action)',q)}</div>`;
+    html+=`<span class="fw-status-badge ${atStatusClass(act.status)}">${esc(act.status||'Not Started')}</span>`;
+    if(act.owner)html+=`<span class="at-owner">👤 ${hlText(act.owner,q)}</span>`;
+    if(act.dueDate)html+=`<span class="at-due${overdue?' at-overdue':''}">📅 ${esc(act.dueDate)}${overdue?' (overdue)':''}</span>`;
+    html+=`<div class="at-acts"><button class="fw-icon-btn" title="Edit" onclick="editAtAction(${act.id})">✏️</button><button class="fw-icon-btn del" title="Delete" onclick="deleteAtAction(${act.id})">🗑</button></div>`;
+  }
+  html+=`</div>`;
+  if(editing){
+    html+=`<div class="at-comment-edit"><textarea class="fw-input" id="at-act-${act.id}-comments" placeholder="Comments..." rows="2" style="width:100%;resize:vertical">${esc(act.comments||'')}</textarea></div>`;
+  }else if(act.comments){
+    html+=`<div class="at-comment">${hlText(act.comments,q)}</div>`;
+  }
+  if(expanded){
+    html+=`<div class="at-sub-wrap">`;
+    act.subactions.forEach(sub=>html+=drawAtSub(act.id,sub,q));
+    html+=`<button class="fw-bulk-btn" style="margin-top:6px" onclick="addAtSub(${act.id})">+ Sub-action</button>`;
+    html+=`</div>`;
+  }
+  html+=`</div>`;
+  return html;
+}
+
+function drawAtSub(actionId,sub,q){
+  const editing=atEditing&&atEditing.type==='sub'&&atEditing.id===sub.id;
+  const overdue=atIsOverdue(sub.dueDate,sub.status);
+  let html=`<div class="at-sub-item">`;
+  html+=`<div class="at-sub-hdr">`;
+  html+=`<span class="at-sub-bullet">•</span>`;
+  if(editing){
+    html+=`<div class="at-edit-grid">
+      <input class="fw-input" id="at-sub-${sub.id}-title" type="text" placeholder="Sub-action title" value="${esc(sub.title||'')}"/>
+      <input class="fw-input" id="at-sub-${sub.id}-owner" type="text" placeholder="Owner" value="${esc(sub.owner||'')}"/>
+      <select class="fw-input" id="at-sub-${sub.id}-status">${ACTION_STATUSES.map(s=>`<option value="${s}"${(sub.status||'Not Started')===s?' selected':''}>${s}</option>`).join('')}</select>
+      <input class="fw-input" id="at-sub-${sub.id}-dueDate" type="date" value="${sub.dueDate||''}"/>
+    </div>
+    <div class="at-acts"><button class="fw-icon-btn save" title="Save" onclick="saveAtSub(${sub.id})">✅</button><button class="fw-icon-btn cancel" title="Cancel" onclick="cancelAtEdit()">✖</button></div>`;
+  }else{
+    html+=`<div class="at-title">${hlText(sub.title||'(untitled sub-action)',q)}</div>`;
+    html+=`<span class="fw-status-badge ${atStatusClass(sub.status)}">${esc(sub.status||'Not Started')}</span>`;
+    if(sub.owner)html+=`<span class="at-owner">👤 ${hlText(sub.owner,q)}</span>`;
+    if(sub.dueDate)html+=`<span class="at-due${overdue?' at-overdue':''}">📅 ${esc(sub.dueDate)}${overdue?' (overdue)':''}</span>`;
+    html+=`<div class="at-acts"><button class="fw-icon-btn" title="Edit" onclick="editAtSub(${sub.id})">✏️</button><button class="fw-icon-btn del" title="Delete" onclick="deleteAtSub(${sub.id},${actionId})">🗑</button></div>`;
+  }
+  html+=`</div>`;
+  if(editing){
+    html+=`<div class="at-comment-edit"><textarea class="fw-input" id="at-sub-${sub.id}-comments" placeholder="Comments..." rows="2" style="width:100%;resize:vertical">${esc(sub.comments||'')}</textarea></div>`;
+  }else if(sub.comments){
+    html+=`<div class="at-comment">${hlText(sub.comments,q)}</div>`;
+  }
+  html+=`</div>`;
+  return html;
+}
+
+async function cancelAtEdit(){
+  if(!atEditing){drawActionTracker();return;}
+  const{type,id}=atEditing;
+  if(type==='action'){
+    const act=atFindAction(id);
+    if(act&&!act.title&&!act.owner&&!act.comments&&!act.dueDate&&(!act.status||act.status==='Not Started')){
+      try{await apiDelete('/action-items/'+id);}catch{}
+      atSections.forEach(s=>{s.actions=s.actions.filter(a=>a.id!==id);});
+    }
+  }else if(type==='sub'){
+    const sub=atFindSub(id);
+    if(sub&&!sub.title&&!sub.owner&&!sub.comments&&!sub.dueDate&&(!sub.status||sub.status==='Not Started')){
+      try{await apiDelete('/action-subitems/'+id);}catch{}
+      atSections.forEach(s=>s.actions.forEach(a=>{a.subactions=a.subactions.filter(x=>x.id!==id);}));
+    }
+  }
+  atEditing=null;
+  drawActionTracker();
+}
+
+async function addAtSection(){
+  let sec;
+  try{sec=await apiPost('/action-sections',{name:'New Section'});}
+  catch(e){alert('Could not add section (is the backend running?): '+e.message);return;}
+  sec.actions=[];
+  atSections.push(sec);
+  atEditing={type:'section',id:sec.id};
+  drawActionTracker();
+  focusAtField(`at-sec-${sec.id}-name`);
+}
+function editAtSection(id){atEditing={type:'section',id};drawActionTracker();focusAtField(`at-sec-${id}-name`);}
+async function saveAtSection(id){
+  const name=document.getElementById(`at-sec-${id}-name`).value.trim()||'Untitled Section';
+  let sec;
+  try{sec=await apiPut('/action-sections/'+id,{name});}
+  catch(e){alert('Could not save section: '+e.message);return;}
+  const local=atFindSection(id);
+  if(local)local.name=sec.name;
+  atEditing=null;
+  drawActionTracker();
+}
+async function deleteAtSection(id){
+  if(!confirm('Delete this section and all its actions/sub-actions? This cannot be undone.'))return;
+  try{await apiDelete('/action-sections/'+id);}
+  catch(e){alert('Could not delete section: '+e.message);return;}
+  atSections=atSections.filter(s=>s.id!==id);
+  drawActionTracker();
+}
+
+async function addAtAction(sectionId){
+  let act;
+  try{act=await apiPost('/action-items',{sectionId,title:'',owner:'',status:'Not Started',dueDate:'',comments:''});}
+  catch(e){alert('Could not add action (is the backend running?): '+e.message);return;}
+  act.subactions=[];
+  const sec=atFindSection(sectionId);
+  sec.actions.push(act);
+  atCollapsedSections.delete(sectionId);
+  atExpandedActions.add(act.id);
+  atEditing={type:'action',id:act.id};
+  drawActionTracker();
+  focusAtField(`at-act-${act.id}-title`);
+}
+function editAtAction(id){atEditing={type:'action',id};drawActionTracker();focusAtField(`at-act-${id}-title`);}
+async function saveAtAction(id){
+  const fields={
+    title:document.getElementById(`at-act-${id}-title`).value,
+    owner:document.getElementById(`at-act-${id}-owner`).value,
+    status:document.getElementById(`at-act-${id}-status`).value,
+    dueDate:document.getElementById(`at-act-${id}-dueDate`).value,
+    comments:document.getElementById(`at-act-${id}-comments`).value,
+  };
+  let act;
+  try{act=await apiPut('/action-items/'+id,fields);}
+  catch(e){alert('Could not save action: '+e.message);return;}
+  const local=atFindAction(id);
+  Object.assign(local,act);
+  atEditing=null;
+  drawActionTracker();
+}
+async function deleteAtAction(id){
+  if(!confirm('Delete this action and all its sub-actions? This cannot be undone.'))return;
+  try{await apiDelete('/action-items/'+id);}
+  catch(e){alert('Could not delete action: '+e.message);return;}
+  atSections.forEach(s=>{s.actions=s.actions.filter(a=>a.id!==id);});
+  drawActionTracker();
+}
+
+async function addAtSub(actionId){
+  let sub;
+  try{sub=await apiPost('/action-subitems',{actionId,title:'',owner:'',status:'Not Started',dueDate:'',comments:''});}
+  catch(e){alert('Could not add sub-action (is the backend running?): '+e.message);return;}
+  const act=atFindAction(actionId);
+  act.subactions.push(sub);
+  atExpandedActions.add(actionId);
+  atEditing={type:'sub',id:sub.id};
+  drawActionTracker();
+  focusAtField(`at-sub-${sub.id}-title`);
+}
+function editAtSub(id){atEditing={type:'sub',id};drawActionTracker();focusAtField(`at-sub-${id}-title`);}
+async function saveAtSub(id){
+  const fields={
+    title:document.getElementById(`at-sub-${id}-title`).value,
+    owner:document.getElementById(`at-sub-${id}-owner`).value,
+    status:document.getElementById(`at-sub-${id}-status`).value,
+    dueDate:document.getElementById(`at-sub-${id}-dueDate`).value,
+    comments:document.getElementById(`at-sub-${id}-comments`).value,
+  };
+  let sub;
+  try{sub=await apiPut('/action-subitems/'+id,fields);}
+  catch(e){alert('Could not save sub-action: '+e.message);return;}
+  const local=atFindSub(id);
+  Object.assign(local,sub);
+  atEditing=null;
+  drawActionTracker();
+}
+async function deleteAtSub(id,actionId){
+  if(!confirm('Delete this sub-action? This cannot be undone.'))return;
+  try{await apiDelete('/action-subitems/'+id);}
+  catch(e){alert('Could not delete sub-action: '+e.message);return;}
+  const act=atFindAction(actionId);
+  if(act)act.subactions=act.subactions.filter(s=>s.id!==id);
+  drawActionTracker();
+}
+
+// ─────────────────────────────────────────────
+// Open file
+// ─────────────────────────────────────────────
+async function openFile(fh,folderId,path){
+  if(isEditing)cancelEdit();
+  const sp=folderId+':'+path;
+  document.querySelectorAll('.tree-item.active').forEach(el=>el.classList.remove('active'));
+  const row=document.querySelector(`[data-sp="${CSS.escape(sp)}"]`);
+  if(row){row.classList.add('active');row.scrollIntoView({block:'nearest'});}
+  activeSP=sp;currentFH=fh;currentFolderID=folderId;currentToolKey=null;
+  const name=path.split('/').pop();
+  const f=ftOf(name);
+  const folder=folders.find(x=>x.id===folderId);
+  const hdr=document.getElementById('c-hdr');hdr.style.display='flex';
+  document.getElementById('c-icon').textContent=f.i;
+  document.getElementById('c-name').textContent=name;
+  document.getElementById('c-badge').textContent=f.l;
+  const dir=path.includes('/')?path.slice(0,path.lastIndexOf('/')):'';
+  document.getElementById('c-path').textContent=[folder?.name,dir].filter(Boolean).join(' / ');
+  document.getElementById('edit-btn').style.display='inline-block';
+  await renderActiveFile();
+}
+
+async function renderActiveFile(){
+  if(!currentFH)return;
+  const name=(activeSP||'').split('/').pop();
+  const f=ftOf(name);
+  setView(`<div class="loading"><div class="spinner"></div></div>`);
+  blobs.forEach(u=>URL.revokeObjectURL(u));blobs=[];
+  try{
+    const file=await currentFH.getFile();
+    switch(f.v){
+      case'md':    await vMd(file);break;
+      case'code':  await vCode(file,f.lang,name);break;
+      case'json':  await vJson(file);break;
+      case'html':  await vHtml(file);break;
+      case'svg':   await vSvg(file);break;
+      case'img':   await vImg(file,name);break;
+      case'pdf':   await vPdf(file);break;
+      case'excel': await vExcel(file);break;
+      case'docx':  await vDocx(file);break;
+      case'pptx':  await vPptx(file);break;
+      case'video': await vVideo(file);break;
+      case'audio': await vAudio(file,name);break;
+      default:     vUnknown(name,file.size);
+    }
+  }catch(e){setView(`<div class="no-view"><div class="no-icon">⚠️</div><h3>Failed to open</h3><p>${esc(e.message)}</p></div>`);}
+}
+
+function setView(html){document.getElementById('view-body').innerHTML=html;}
+
+// ─────────────────────────────────────────────
+// Editor
+// ─────────────────────────────────────────────
+async function startEdit(){
+  if(!currentFH&&!currentToolKey)return;
+  isBinaryMode=false;
+  isEditing=true;
+  document.getElementById('view-body').style.display='none';
+  document.getElementById('edit-body').style.display='flex';
+  document.getElementById('edit-btn').style.display='none';
+  document.getElementById('hdr-edit').style.display='flex';
+  const ea=document.getElementById('edit-area');
+  const saveBtn=document.getElementById('save-btn');
+  if(currentToolKey){
+    ea.readOnly=false;
+    ea.style.color='#adbac7';
+    ea.style.fontStyle='normal';
+    saveBtn.disabled=false;
+    saveBtn.style.opacity='1';
+    saveBtn.style.cursor='pointer';
+    document.getElementById('insert-table-btn').disabled=false;
+    document.getElementById('add-row-btn').disabled=false;
+    document.getElementById('add-col-btn').disabled=false;
+    const stored=localStorage.getItem('fv-tool-'+currentToolKey);
+    ea.value=stored!==null?stored:defaultToolContent(currentToolKey);
+    setSaveStatus('ready');
+    ea.focus();
+    return;
+  }
+  const name=(activeSP||'').split('/').pop();
+  const ext=name.split('.').pop().toLowerCase();
+  isBinaryMode=BINARY_EXTS.has(ext);
+  if(isBinaryMode){
+    ea.value=`This is a binary file (.${ext}) and can't be edited as text here.\n\nFile: ${name}\n\nOpen it in its native application (e.g. Excel, Word, an image viewer) to make changes.`;
+    ea.readOnly=true;
+    ea.style.color='var(--text3)';
+    ea.style.fontStyle='italic';
+    saveBtn.disabled=true;
+    saveBtn.style.opacity='.4';
+    saveBtn.style.cursor='default';
+    document.getElementById('insert-table-btn').disabled=true;
+    document.getElementById('add-row-btn').disabled=true;
+    document.getElementById('add-col-btn').disabled=true;
+    setSaveStatus('readonly');
+    return;
+  }
+  document.getElementById('insert-table-btn').disabled=false;
+  document.getElementById('add-row-btn').disabled=false;
+  document.getElementById('add-col-btn').disabled=false;
+  ea.readOnly=false;
+  ea.style.color='#adbac7';
+  ea.style.fontStyle='normal';
+  saveBtn.disabled=false;
+  saveBtn.style.opacity='1';
+  saveBtn.style.cursor='pointer';
+  try{
+    const file=await currentFH.getFile();
+    const text=await file.text();
+    ea.value=text;
+    setSaveStatus('ready');
+    ea.focus();
+  }catch(e){
+    ea.value='Error loading file: '+e.message;
+    ea.readOnly=true;
+    setSaveStatus('readonly');
+  }
+}
+function cancelEdit(){
+  isEditing=false;
+  isBinaryMode=false;
+  const ea=document.getElementById('edit-area');
+  ea.readOnly=false;
+  ea.style.color='#adbac7';
+  ea.style.fontStyle='normal';
+  const saveBtn=document.getElementById('save-btn');
+  saveBtn.disabled=false;
+  saveBtn.style.opacity='1';
+  saveBtn.style.cursor='pointer';
+  document.getElementById('view-body').style.display='';
+  document.getElementById('edit-body').style.display='none';
+  document.getElementById('edit-btn').style.display='inline-block';
+  document.getElementById('hdr-edit').style.display='none';
+}
+const FV_TABLE_STYLE=`<style>
+  body{font-family:Calibri,"Segoe UI",sans-serif;font-size:11pt;background:#1e1e1e;color:#ddd;margin:20px}
+  table.fv-table{border-collapse:collapse;margin:10px 0}
+  table.fv-table th{background:#2d333b;color:#fff;font-weight:bold;border:1px solid #444;padding:6px 10px;text-align:left}
+  table.fv-table td{border:1px solid #444;padding:6px 10px}
+</style>
+`;
+function insertTableSnippet(){
+  const ea=document.getElementById('edit-area');
+  if(ea.readOnly||ea.disabled)return;
+  const colsInput=prompt('How many columns?','3');
+  if(colsInput===null)return;
+  const rowsInput=prompt('How many data rows (not counting the header)?','3');
+  if(rowsInput===null)return;
+  const cols=Math.max(1,Math.min(20,parseInt(colsInput)||1));
+  const rows=Math.max(1,Math.min(100,parseInt(rowsInput)||1));
+  let html='<table class="fv-table">\n  <thead>\n    <tr>\n';
+  for(let c=1;c<=cols;c++)html+=`      <th>Column ${c}</th>\n`;
+  html+='    </tr>\n  </thead>\n  <tbody>\n';
+  for(let r=0;r<rows;r++){
+    html+='    <tr>\n';
+    for(let c=0;c<cols;c++)html+='      <td></td>\n';
+    html+='    </tr>\n';
+  }
+  html+='  </tbody>\n</table>\n';
+  let start=ea.selectionStart,end=ea.selectionEnd;
+  let value=ea.value;
+  if(!value.includes('fv-table')){
+    value=FV_TABLE_STYLE+value;
+    start+=FV_TABLE_STYLE.length;
+    end+=FV_TABLE_STYLE.length;
+  }
+  ea.value=value.slice(0,start)+html+value.slice(end);
+  ea.selectionStart=ea.selectionEnd=start+html.length;
+  ea.focus();
+  markUnsaved();
+}
+function findTableRegion(text,pos){
+  const tableStart=text.lastIndexOf('<table',pos);
+  if(tableStart!==-1){
+    const afterStart=text.indexOf('>',tableStart)+1;
+    const tableEnd=text.indexOf('</table>',afterStart);
+    if(tableEnd!==-1&&pos<=tableEnd+'</table>'.length){
+      return{start:tableStart,end:tableEnd+'</table>'.length};
+    }
+  }
+  const lastEnd=text.lastIndexOf('</table>');
+  if(lastEnd===-1)return null;
+  const lastStart=text.lastIndexOf('<table',lastEnd);
+  if(lastStart===-1)return null;
+  return{start:lastStart,end:lastEnd+'</table>'.length};
+}
+function addTableRow(){
+  const ea=document.getElementById('edit-area');
+  if(ea.readOnly||ea.disabled)return;
+  const text=ea.value;
+  const region=findTableRegion(text,ea.selectionStart);
+  if(!region){alert('No table found. Insert a table first using 📋 Table.');return;}
+  const tableHtml=text.slice(region.start,region.end);
+  const firstRow=tableHtml.match(/<tr[^>]*>([\s\S]*?)<\/tr>/);
+  const cellCount=firstRow?(firstRow[1].match(/<t[hd][^>]*>/g)||[]).length:1;
+  const newRow='    <tr>\n'+'      <td></td>\n'.repeat(cellCount)+'    </tr>\n';
+  const tbodyClose=tableHtml.lastIndexOf('</tbody>');
+  const insertAt=region.start+(tbodyClose!==-1?tbodyClose:tableHtml.lastIndexOf('</table>'));
+  ea.value=text.slice(0,insertAt)+newRow+text.slice(insertAt);
+  markUnsaved();
+}
+function addTableColumn(){
+  const ea=document.getElementById('edit-area');
+  if(ea.readOnly||ea.disabled)return;
+  const text=ea.value;
+  const region=findTableRegion(text,ea.selectionStart);
+  if(!region){alert('No table found. Insert a table first using 📋 Table.');return;}
+  let tableHtml=text.slice(region.start,region.end);
+  tableHtml=tableHtml.replace(/(<tr[^>]*>)([\s\S]*?)(<\/tr>)/g,(m,open,inner,close)=>{
+    const tag=/<th[\s>]/.test(inner)?'th':'td';
+    return open+inner+`      <${tag}></${tag}>\n    `+close;
+  });
+  ea.value=text.slice(0,region.start)+tableHtml+text.slice(region.end);
+  markUnsaved();
+}
+async function saveFile(){
+  if(!isEditing||isBinaryMode)return;
+  if(currentToolKey){
+    localStorage.setItem('fv-tool-'+currentToolKey,document.getElementById('edit-area').value);
+    cancelEdit();
+    await openToolFile(currentToolKey);
+    return;
+  }
+  if(!currentFH)return;
+  try{
+    const opts={mode:'readwrite'};
+    if(await currentFH.queryPermission(opts)!=='granted'){
+      if(await currentFH.requestPermission(opts)!=='granted'){alert('Write permission denied.');return;}
+    }
+    const w=await currentFH.createWritable();
+    await w.write(document.getElementById('edit-area').value);
+    await w.close();
+    cancelEdit();
+    await renderActiveFile();
+  }catch(e){alert('Save failed: '+e.message);}
+}
+function markUnsaved(){if(isEditing&&!isBinaryMode)setSaveStatus('unsaved');}
+function setSaveStatus(s){
+  const el=document.getElementById('save-status');
+  if(s==='unsaved'){el.textContent='● Unsaved';el.className='unsaved';}
+  else if(s==='readonly'){el.textContent='🔒 Read-only';el.className='readonly';}
+  else if(s==='saved'){el.textContent='✓ Saved';el.className='saved';setTimeout(()=>{if(el.className==='saved')el.textContent='';},3000);}
+  else{el.textContent='';el.className='';}
+}
+function handleEditorKey(e){
+  if(isBinaryMode){if(e.key==='Tab')return;e.preventDefault();return;}
+  if((e.ctrlKey||e.metaKey)&&e.key==='s'){e.preventDefault();saveFile();}
+  if(e.key==='Tab'){
+    e.preventDefault();
+    const t=e.target,s=t.selectionStart,en=t.selectionEnd;
+    t.value=t.value.slice(0,s)+'  '+t.value.slice(en);
+    t.setSelectionRange(s+2,s+2);markUnsaved();
+  }
+}
+
+// ─────────────────────────────────────────────
+// File viewers
+// ─────────────────────────────────────────────
+async function vMd(file){
+  const html=marked.parse(await file.text());
+  setView(`<div class="md">${html}</div>`);
+  document.querySelectorAll('.md pre code').forEach(el=>hljs.highlightElement(el));
+}
+async function vCode(file,lang,name){
+  const body=document.getElementById('view-body');body.innerHTML='';
+  const wrap=document.createElement('div');wrap.className='code-wrap';
+  if(file.size>800000){
+    const text=(await file.text()).slice(0,500000);
+    wrap.innerHTML=`<div class="code-bar"><span class="code-lang">${lang||'text'}</span><span class="code-meta">${fmtBytes(file.size)} · too large for highlight</span></div>`;
+    const pre=document.createElement('pre');
+    pre.style.cssText='padding:20px;overflow-x:auto;background:#161b22;color:#adbac7;font-family:monospace;font-size:13px;line-height:1.6;white-space:pre';
+    pre.textContent=text+(file.size>500000?'\n\n[...truncated...]':'');
+    wrap.appendChild(pre);
+  }else{
+    const text=await file.text();
+    const lc=text.split('\n').length;
+    const code=document.createElement('code');
+    code.className=lang?`language-${lang}`:'';code.textContent=text;
+    hljs.highlightElement(code);
+    const pre=document.createElement('pre');pre.appendChild(code);
+    wrap.innerHTML=`<div class="code-bar"><span class="code-lang">${lang||'text'}</span><span class="code-meta">${fmtBytes(file.size)} · ${lc.toLocaleString()} lines</span></div>`;
+    wrap.appendChild(pre);
+  }
+  body.appendChild(wrap);
+}
+async function vJson(file){
+  const body=document.getElementById('view-body');body.innerHTML='';
+  const text=await file.text();
+  let fmt=text;try{fmt=JSON.stringify(JSON.parse(text),null,2);}catch{}
+  const lc=fmt.split('\n').length;
+  const wrap=document.createElement('div');wrap.className='code-wrap';
+  wrap.innerHTML=`<div class="code-bar"><span class="code-lang">JSON</span><span class="code-meta">${fmtBytes(file.size)} · ${lc.toLocaleString()} lines</span></div>`;
+  const code=document.createElement('code');code.className='language-json';code.textContent=fmt;
+  if(file.size<1000000)hljs.highlightElement(code);
+  const pre=document.createElement('pre');pre.appendChild(code);wrap.appendChild(pre);
+  body.appendChild(wrap);
+}
+function injectTableTools(html){
+  if(!/<table[^>]*class=["'][^"']*\bfv-table\b/i.test(html))return html;
+  if(html.includes('fv-table-tools'))return html;
+  const tools=`<!-- fv-table-tools -->
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"><\/script>
+<style>
+.fv-toolbar{display:flex;gap:8px;margin:8px 0;font-family:Calibri,"Segoe UI",sans-serif;font-size:11pt}
+.fv-toolbar button{background:#2d333b;color:#fff;border:1px solid #555;border-radius:4px;padding:5px 12px;cursor:pointer;font-size:11pt;font-family:inherit}
+.fv-toolbar button:hover{background:#3a414b}
+.fv-toolbar .fv-clear{background:none;color:#aaa}
+table.fv-table thead tr.fv-filter-row th{background:#22262c;padding:4px}
+table.fv-table thead tr.fv-filter-row input{width:100%;box-sizing:border-box;font-family:inherit;font-size:10pt;padding:3px 5px;border:1px solid #555;border-radius:3px;background:#1e1e1e;color:#ddd}
+</style>
+<script>
+(function(){
+  function ready(fn){if(document.readyState!='loading')fn();else document.addEventListener('DOMContentLoaded',fn);}
+  function applyFilters(table,filterRow){
+    var inputs=filterRow.querySelectorAll('input');
+    var filters=[];
+    for(var i=0;i<inputs.length;i++)filters.push(inputs[i].value.trim().toLowerCase());
+    var rows=table.querySelectorAll('tbody tr');
+    for(var r=0;r<rows.length;r++){
+      var tr=rows[r];
+      var cells=tr.children;
+      var visible=true;
+      for(var i=0;i<filters.length;i++){
+        if(filters[i]&&(!cells[i]||cells[i].textContent.toLowerCase().indexOf(filters[i])===-1)){visible=false;break;}
+      }
+      tr.style.display=visible?'':'none';
+    }
+  }
+  function exportTable(table,name){
+    var headRow=table.querySelector('thead tr');
+    var headers=[];
+    var ths=headRow.children;
+    for(var i=0;i<ths.length;i++)headers.push(ths[i].textContent.trim());
+    var data=[headers];
+    var rows=table.querySelectorAll('tbody tr');
+    for(var r=0;r<rows.length;r++){
+      var tr=rows[r];
+      if(tr.style.display==='none')continue;
+      var row=[];
+      var cells=tr.children;
+      for(var c=0;c<cells.length;c++)row.push(cells[c].textContent.trim());
+      data.push(row);
+    }
+    var ws=XLSX.utils.aoa_to_sheet(data);
+    var wb=XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb,ws,'Table');
+    XLSX.writeFile(wb,name+'.xlsx');
+  }
+  function enhanceTable(table,idx){
+    var thead=table.querySelector('thead');
+    if(!thead)return;
+    var headRow=thead.querySelector('tr');
+    if(!headRow)return;
+    var filterRow=document.createElement('tr');
+    filterRow.className='fv-filter-row';
+    var n=headRow.children.length;
+    for(var i=0;i<n;i++){
+      var th=document.createElement('th');
+      var input=document.createElement('input');
+      input.type='text';
+      input.placeholder='Filter...';
+      input.addEventListener('input',function(){applyFilters(table,filterRow);});
+      th.appendChild(input);
+      filterRow.appendChild(th);
+    }
+    thead.appendChild(filterRow);
+
+    var toolbar=document.createElement('div');
+    toolbar.className='fv-toolbar';
+    var exportBtn=document.createElement('button');
+    exportBtn.textContent='⬇ Export to Excel';
+    exportBtn.addEventListener('click',function(){exportTable(table,'table-'+(idx+1));});
+    var clearBtn=document.createElement('button');
+    clearBtn.textContent='Clear filters';
+    clearBtn.className='fv-clear';
+    clearBtn.addEventListener('click',function(){
+      var inputs=filterRow.querySelectorAll('input');
+      for(var i=0;i<inputs.length;i++)inputs[i].value='';
+      applyFilters(table,filterRow);
+    });
+    toolbar.appendChild(exportBtn);
+    toolbar.appendChild(clearBtn);
+    table.parentNode.insertBefore(toolbar,table);
+  }
+  ready(function(){
+    var tables=document.querySelectorAll('table.fv-table');
+    for(var i=0;i<tables.length;i++)enhanceTable(tables[i],i);
+  });
+})();
+<\/script>
+`;
+  if(/<\/body>/i.test(html))return html.replace(/<\/body>/i,tools+'</body>');
+  return html+tools;
+}
+async function vHtml(file){
+  const html=injectTableTools(await file.text());
+  const blob=new Blob([html],{type:'text/html'});
+  const url=URL.createObjectURL(blob);blobs.push(url);
+  setView(`<div class="frame-wrap html-frame"><iframe src="${url}" sandbox="allow-scripts allow-forms allow-downloads"></iframe></div>`);
+}
+async function vSvg(file){
+  const blob=new Blob([await file.text()],{type:'image/svg+xml'});
+  const url=URL.createObjectURL(blob);blobs.push(url);
+  setView(`<div class="img-view"><img src="${url}" style="max-width:600px;max-height:500px" /></div>`);
+}
+async function vImg(file,name){
+  const url=URL.createObjectURL(file);blobs.push(url);
+  setView(`<div class="img-view"><img src="${url}" alt="${esc(name)}" /></div>`);
+}
+async function vPdf(file){
+  const url=URL.createObjectURL(file);blobs.push(url);
+  setView(`<div class="frame-wrap pdf-frame"><iframe src="${url}#view=FitH" type="application/pdf"></iframe></div>`);
+}
+async function vExcel(file){
+  let wb;
+  try{
+    const ext=file.name.split('.').pop().toLowerCase();
+    wb=ext==='csv'?XLSX.read(await file.text(),{type:'string'}):XLSX.read(await file.arrayBuffer(),{type:'array'});
+  }catch(e){setView(`<div class="no-view"><div class="no-icon">⚠️</div><h3>Spreadsheet error</h3><p>${esc(e.message)}</p></div>`);return;}
+  xlsWb=wb;renderSheet(wb,0);
+}
+function renderSheet(wb,si){
+  xlsWb=wb;
+  const ws=wb.Sheets[wb.SheetNames[si]];
+  const data=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+  let html='';
+  if(wb.SheetNames.length>1){
+    html+='<div class="sheet-tabs">';
+    wb.SheetNames.forEach((n,i)=>html+=`<button class="stab${i===si?' active':''}" onclick="renderSheet(xlsWb,${i})">${esc(n)}</button>`);
+    html+='</div>';
+  }
+  if(!data.length){html+='<div class="no-view"><div class="no-icon">📗</div><h3>Empty sheet</h3></div>';setView(html);return;}
+  const cols=Math.max(...data.map(r=>r.length));
+  html+='<div class="tbl-wrap"><table class="sheet-tbl"><thead><tr><th class="rn">#</th>';
+  data[0].forEach(c=>html+=`<th>${esc(String(c??''))}</th>`);
+  for(let i=data[0].length;i<cols;i++)html+='<th></th>';
+  html+='</tr></thead><tbody>';
+  data.slice(1).forEach((row,ri)=>{
+    html+=`<tr><td class="rn">${ri+1}</td>`;
+    for(let c=0;c<cols;c++){const v=row[c]??'';html+=`<td title="${esc(String(v))}">${esc(String(v))}</td>`;}
+    html+='</tr>';
+  });
+  html+='</tbody></table></div>';setView(html);
+}
+async function vDocx(file){
+  if(typeof mammoth==='undefined'){setView(`<div class="no-view"><div class="no-icon">⚠️</div><h3>mammoth.js not loaded</h3><p>Check your internet connection.</p></div>`);return;}
+  try{const r=await mammoth.convertToHtml({arrayBuffer:await file.arrayBuffer()});setView(`<div class="docx-wrap">${r.value}</div>`);}
+  catch(e){setView(`<div class="no-view"><div class="no-icon">📘</div><h3>Word preview failed</h3><p>${esc(e.message)}</p></div>`);}
+}
+async function vPptx(file){
+  try{
+    const JSZip=await loadJSZip();
+    const zip=await JSZip.loadAsync(await file.arrayBuffer());
+    const sf=Object.keys(zip.files).filter(f=>/^ppt\/slides\/slide\d+\.xml$/.test(f)).sort((a,b)=>parseInt(a.match(/\d+/)[0])-parseInt(b.match(/\d+/)[0]));
+    if(!sf.length){setView(`<div class="no-view"><div class="no-icon">📙</div><h3>No slides found</h3></div>`);return;}
+    let html=`<div style="max-width:860px">`;
+    for(let i=0;i<sf.length;i++){
+      const xml=await zip.files[sf[i]].async('string');
+      const texts=[...xml.matchAll(/<a:t[^>]*>([^<]*)<\/a:t>/g)].map(m=>m[1].trim()).filter(Boolean);
+      html+=`<div class="slide-card"><div class="slide-num">Slide ${i+1}</div><div class="slide-text">${texts.length?esc(texts.join(' ')):'<span style="color:var(--text3);font-style:italic">Empty slide</span>'}</div></div>`;
+    }
+    setView(html+'</div>');
+  }catch(e){setView(`<div class="no-view"><div class="no-icon">📙</div><h3>PPTX preview failed</h3><p>${esc(e.message)}</p></div>`);}
+}
+function loadJSZip(){
+  if(window.JSZip)return Promise.resolve(window.JSZip);
+  return new Promise((res,rej)=>{const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';s.onload=()=>res(window.JSZip);s.onerror=rej;document.head.appendChild(s);});
+}
+async function vVideo(file){
+  const url=URL.createObjectURL(file);blobs.push(url);
+  setView(`<div class="vid-wrap"><video controls src="${url}"></video></div>`);
+}
+async function vAudio(file,name){
+  const url=URL.createObjectURL(file);blobs.push(url);
+  setView(`<div class="aud-wrap"><div class="aud-icon">🎵</div><div class="aud-name">${esc(name)}</div><audio controls src="${url}"></audio></div>`);
+}
+function vUnknown(name,size){setView(`<div class="no-view"><div class="no-icon">📄</div><h3>${esc(name)}</h3><p>${fmtBytes(size)} · No preview for this file type</p></div>`);}
+
+// ─────────────────────────────────────────────
+// Utilities
+// ─────────────────────────────────────────────
+function fmtBytes(b){if(!b)return'0 B';const k=1024,s=['B','KB','MB','GB'];const i=Math.floor(Math.log(b)/Math.log(k));return+(b/Math.pow(k,i)).toFixed(1)+' '+s[i];}
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function hlText(t,q){const i=t.toLowerCase().indexOf(q);if(i<0)return esc(t);return esc(t.slice(0,i))+'<mark>'+esc(t.slice(i,i+q.length))+'</mark>'+esc(t.slice(i+q.length));}
+
+// ─────────────────────────────────────────────
+// Sidebar resize
+// ─────────────────────────────────────────────
+const sb=document.getElementById('sb');
+const rh=document.getElementById('rh');
+let resizing=false,startX=0,startW=0;
+rh.addEventListener('mousedown',e=>{resizing=true;startX=e.clientX;startW=sb.offsetWidth;rh.classList.add('active');document.body.style.cursor='col-resize';document.body.style.userSelect='none';e.preventDefault();});
+document.addEventListener('mousemove',e=>{if(!resizing)return;sb.style.width=Math.max(180,Math.min(520,startW+(e.clientX-startX)))+'px';});
+document.addEventListener('mouseup',()=>{if(!resizing)return;resizing=false;rh.classList.remove('active');document.body.style.cursor='';document.body.style.userSelect='';});
+
+// ─────────────────────────────────────────────
+// Sidebar collapse/expand
+// ─────────────────────────────────────────────
+function toggleSidebar(){
+  const collapsed=sb.classList.toggle('collapsed');
+  rh.style.display=collapsed?'none':'';
+  const btn=document.getElementById('btn-collapse');
+  btn.textContent=collapsed?'➡':'⬅';
+  btn.title=collapsed?'Expand sidebar':'Collapse sidebar';
+}
+
+// ─────────────────────────────────────────────
+// Keyboard shortcuts
+// ─────────────────────────────────────────────
+document.addEventListener('keydown',e=>{
+  if((e.ctrlKey||e.metaKey)&&e.key==='o'){e.preventDefault();addFolder();}
+  if((e.ctrlKey||e.metaKey)&&e.key==='s'&&isEditing){e.preventDefault();saveFile();}
+  if(e.key==='Escape'&&isEditing)cancelEdit();
+});
+
+// ─────────────────────────────────────────────
+// Init — render Tools workspace + restore previously opened folders
+// ─────────────────────────────────────────────
+(async function init(){
+  renderToolsSection();
+  await loadFavourites();
+  renderFavouritesSection();
+  await restoreFolders();
+  if(!folders.length){
+    const empty=document.createElement('div');
+    empty.className='empty-sb';
+    empty.innerHTML=`<div class="e-icon">🗂</div><p>Click <strong>Open Folder</strong> to add folders.<br>You can open multiple folders at once.</p>`;
+    document.getElementById('tree').appendChild(empty);
+  }
+  updateHdrInfo();
+})();
+</script>
+</body>
+</html>
