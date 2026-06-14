@@ -431,6 +431,7 @@ const TOOLS_ITEMS=[
   {key:'buildsheet',name:'Build Sheet',icon:'🧾',badge:'Markdown'},
   {key:'firewall',name:'Firewall Rules',icon:'🛡️',badge:'Table'},
   {key:'actiontracker',name:'Action Tracker',icon:'✅',badge:'Tracker'},
+  {key:'pimactivation',name:'PIM Activation',icon:'🔑',badge:'Azure'},
 ];
 
 // ─────────────────────────────────────────────
@@ -1107,6 +1108,9 @@ async function openToolFile(key){
   }else if(key==='actiontracker'){
     document.getElementById('edit-btn').style.display='none';
     renderActionTracker();
+  }else if(key==='pimactivation'){
+    document.getElementById('edit-btn').style.display='none';
+    renderPimActivation();
   }else{
     document.getElementById('edit-btn').style.display='inline-block';
     const stored=localStorage.getItem('fv-tool-'+key);
@@ -2007,6 +2011,155 @@ async function deleteAtSub(id,actionId){
   const act=atFindAction(actionId);
   if(act)act.subactions=act.subactions.filter(s=>s.id!==id);
   drawActionTracker();
+}
+
+// ─────────────────────────────────────────────
+// Azure PIM Activation (Contributor role)
+// ─────────────────────────────────────────────
+const PIM_ROLES=['Contributor','Owner','Reader'];
+let pimRowSeq=0;
+let pimSavedSubs=[];
+
+async function loadPimSubs(){
+  try{pimSavedSubs=await apiGet('/pim/subscriptions');}catch(e){pimSavedSubs=[];}
+}
+
+function pimSubOptionsHtml(selected){
+  const placeholder=pimSavedSubs.length?'— Select subscription —':'No saved subscriptions — add one below';
+  return `<option value="">${placeholder}</option>` + pimSavedSubs.map(s=>
+    `<option value="${esc(s.subscriptionId)}"${s.subscriptionId===selected?' selected':''}>${esc(s.name||s.subscriptionId)} (${esc(s.subscriptionId)})</option>`
+  ).join('');
+}
+
+function pimSavedListHtml(){
+  if(!pimSavedSubs.length)return `<div style="color:var(--text3);font-size:13px">No saved subscriptions yet.</div>`;
+  return pimSavedSubs.map(s=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 10px;background:var(--subtle);border-radius:6px;margin-bottom:4px">
+    <span><b>${esc(s.name||'(unnamed)')}</b> — <span style="font-family:monospace;color:var(--text3)">${esc(s.subscriptionId)}</span></span>
+    <button class="at-toggle-btn" onclick="pimDeleteSubscription(${s.id})" title="Remove">✕</button>
+  </div>`).join('');
+}
+
+function pimRowHtml(idx,selected){
+  return `<div class="pim-row" data-idx="${idx}" style="display:flex;gap:8px;margin-bottom:8px;align-items:center">
+    <select class="fw-input pim-sub" style="flex:1">${pimSubOptionsHtml(selected||'')}</select>
+    <select class="fw-input pim-role" style="width:140px">
+      ${PIM_ROLES.map(r=>`<option value="${r}">${r}</option>`).join('')}
+    </select>
+    <button class="at-toggle-btn" onclick="pimRemoveRow(${idx})" title="Remove this subscription">✕</button>
+  </div>`;
+}
+function pimAddRow(){
+  pimRowSeq++;
+  document.getElementById('pim-rows').insertAdjacentHTML('beforeend',pimRowHtml(pimRowSeq));
+}
+function pimRemoveRow(idx){
+  const rows=document.querySelectorAll('.pim-row');
+  if(rows.length<=1)return;
+  const el=document.querySelector(`.pim-row[data-idx="${idx}"]`);
+  if(el)el.remove();
+}
+function pimRefreshSubSelects(){
+  document.querySelectorAll('.pim-sub').forEach(sel=>{
+    const cur=sel.value;
+    sel.innerHTML=pimSubOptionsHtml(cur);
+  });
+}
+
+async function renderPimActivation(){
+  pimRowSeq=0;
+  setView('<div style="padding:20px;color:var(--text3)">Loading…</div>');
+  await loadPimSubs();
+  setView(`
+    <div style="padding:20px;max-width:680px">
+      <h3 style="margin:0 0 4px;color:var(--text)">Azure PIM — Role Activation</h3>
+      <p style="color:var(--text3);font-size:13px;margin:0 0 16px">Pick a saved subscription and the role to activate (Contributor, Owner, Reader). Requires the Azure CLI to be logged in (<code>az login</code>) on the machine running the backend.</p>
+      <label style="display:block;font-size:12px;color:var(--text2);margin-bottom:4px">Subscriptions *</label>
+      <div id="pim-rows">${pimRowHtml(pimRowSeq)}</div>
+      <button class="at-toggle-btn" onclick="pimAddRow()">+ Add Subscription</button>
+      <div style="display:flex;gap:12px;margin-top:16px;flex-wrap:wrap">
+        <div>
+          <label style="display:block;font-size:12px;color:var(--text2);margin-bottom:4px">Duration (hours) *</label>
+          <input id="pim-duration" class="fw-input" type="number" min="1" max="8" value="8" style="width:100px"/>
+        </div>
+        <div style="flex:1;min-width:200px">
+          <label style="display:block;font-size:12px;color:var(--text2);margin-bottom:4px">Ticket Number *</label>
+          <input id="pim-ticket" class="fw-input" type="text" style="width:100%" placeholder="INC0012345"/>
+        </div>
+        <div style="flex:1;min-width:200px">
+          <label style="display:block;font-size:12px;color:var(--text2);margin-bottom:4px">Ticket System</label>
+          <input id="pim-ticket-system" class="fw-input" type="text" style="width:100%" placeholder="ServiceNow"/>
+        </div>
+      </div>
+      <label style="display:block;font-size:12px;color:var(--text2);margin:12px 0 4px">Justification *</label>
+      <textarea id="pim-justification" class="fw-input" style="width:100%;height:60px;resize:vertical" placeholder="Reason for activation"></textarea>
+      <button class="fw-add-btn" style="margin-top:14px" onclick="pimActivate()">🔑 Activate Role(s)</button>
+      <div id="pim-results" style="margin-top:16px"></div>
+
+      <div style="margin-top:28px;padding-top:16px;border-top:1px solid var(--border)">
+        <h4 style="margin:0 0 8px;color:var(--text)">📁 Saved Subscriptions</h4>
+        <div id="pim-saved-list">${pimSavedListHtml()}</div>
+        <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
+          <input id="pim-new-name" class="fw-input" placeholder="Name (e.g. Prod-Networking)" style="flex:1;min-width:160px"/>
+          <input id="pim-new-subid" class="fw-input" placeholder="Subscription ID" style="flex:1;min-width:220px;font-family:monospace"/>
+          <button class="fw-add-btn" onclick="pimSaveSubscription()">💾 Save</button>
+        </div>
+      </div>
+    </div>
+  `);
+}
+
+async function pimSaveSubscription(){
+  const name=document.getElementById('pim-new-name').value.trim();
+  const subscriptionId=document.getElementById('pim-new-subid').value.trim();
+  if(!subscriptionId){alert('Enter a subscription ID');return;}
+  try{await apiPost('/pim/subscriptions',{name,subscriptionId});}
+  catch(e){alert('Could not save: '+e.message);return;}
+  document.getElementById('pim-new-name').value='';
+  document.getElementById('pim-new-subid').value='';
+  await loadPimSubs();
+  document.getElementById('pim-saved-list').innerHTML=pimSavedListHtml();
+  pimRefreshSubSelects();
+}
+
+async function pimDeleteSubscription(id){
+  if(!confirm('Remove this saved subscription?'))return;
+  try{await apiDelete('/pim/subscriptions/'+id);}
+  catch(e){alert('Could not delete: '+e.message);return;}
+  await loadPimSubs();
+  document.getElementById('pim-saved-list').innerHTML=pimSavedListHtml();
+  pimRefreshSubSelects();
+}
+
+async function pimActivate(){
+  const items=[...document.querySelectorAll('.pim-row')].map(row=>({
+    subscriptionId:row.querySelector('.pim-sub').value.trim(),
+    role:row.querySelector('.pim-role').value,
+  })).filter(it=>it.subscriptionId);
+  const durationHours=document.getElementById('pim-duration').value;
+  const justification=document.getElementById('pim-justification').value.trim();
+  const ticketNumber=document.getElementById('pim-ticket').value.trim();
+  const ticketSystem=document.getElementById('pim-ticket-system').value.trim();
+  const resultsEl=document.getElementById('pim-results');
+  if(!items.length){alert('Select at least one subscription');return;}
+  if(!justification||!ticketNumber){alert('Justification and ticket number are required');return;}
+  resultsEl.innerHTML='<div style="color:var(--text3)">Activating…</div>';
+  try{
+    const r=await fetch(API_BASE+'/pim/activate',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({items,durationHours,justification,ticketNumber,ticketSystem})
+    });
+    const data=await r.json();
+    if(!r.ok){resultsEl.innerHTML=`<div style="color:var(--red)">${esc(data.error||'Request failed')}</div>`;return;}
+    resultsEl.innerHTML=data.results.map(res=>{
+      const saved=pimSavedSubs.find(s=>s.subscriptionId===res.subscriptionId);
+      const label=saved&&saved.name?`${esc(saved.name)} (${esc(res.subscriptionId)})`:esc(res.subscriptionId);
+      return `<div style="padding:8px 12px;border-radius:6px;margin-bottom:6px;background:var(--subtle);border-left:3px solid ${res.ok?'var(--green)':'var(--red)'}">
+        <b>${label}</b> (${esc(res.role)}) — ${esc(res.message)}
+      </div>`;
+    }).join('');
+  }catch(e){
+    resultsEl.innerHTML=`<div style="color:var(--red)">Error: ${esc(e.message)}</div>`;
+  }
 }
 
 // ─────────────────────────────────────────────

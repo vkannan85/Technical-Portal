@@ -1,6 +1,8 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const crypto = require('crypto');
+const { execSync } = require('child_process');
 const Database = require('better-sqlite3');
 
 const PORT = 3420;
@@ -75,6 +77,13 @@ CREATE TABLE IF NOT EXISTS action_subitems (
   createdAt TEXT DEFAULT (datetime('now')),
   updatedAt TEXT DEFAULT (datetime('now')),
   FOREIGN KEY(actionId) REFERENCES action_items(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS pim_subscriptions (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL DEFAULT '',
+  subscriptionId TEXT NOT NULL,
+  createdAt TEXT DEFAULT (datetime('now'))
 );
 `);
 
@@ -301,6 +310,127 @@ app.put('/api/action-subitems/:id', (req, res) => {
 app.delete('/api/action-subitems/:id', (req, res) => {
   db.prepare('DELETE FROM action_subitems WHERE id=?').run(req.params.id);
   res.json({ ok: true });
+});
+
+// ───────────────────────────────────────────
+// Azure PIM Activation (via Azure CLI login)
+// ───────────────────────────────────────────
+app.get('/api/pim/subscriptions', (req, res) => {
+  res.json(db.prepare('SELECT * FROM pim_subscriptions ORDER BY name ASC, id ASC').all());
+});
+
+app.post('/api/pim/subscriptions', (req, res) => {
+  const { name, subscriptionId } = req.body;
+  if (!subscriptionId) return res.status(400).json({ error: 'subscriptionId is required' });
+  const info = db.prepare('INSERT INTO pim_subscriptions (name, subscriptionId) VALUES (?, ?)').run(name || '', subscriptionId);
+  res.json(db.prepare('SELECT * FROM pim_subscriptions WHERE id=?').get(info.lastInsertRowid));
+});
+
+app.delete('/api/pim/subscriptions/:id', (req, res) => {
+  db.prepare('DELETE FROM pim_subscriptions WHERE id=?').run(req.params.id);
+  res.json({ ok: true });
+});
+
+const PIM_ROLE_IDS = {
+  Owner: '8e3af657-a8ff-443c-a75c-2fe8c4bcb635',
+  Contributor: 'b24988ac-6180-42a0-ab88-20f7382dd24c',
+  Reader: 'acdd72a7-3385-48ef-bd42-f606fba81ae7',
+};
+
+function getAzToken() {
+  let out;
+  try {
+    out = execSync('az account get-access-token --resource https://management.azure.com -o json', { encoding: 'utf8' });
+  } catch (e) {
+    throw new Error('Azure CLI not available or not logged in. Open a terminal, run "az login", then try again.');
+  }
+  return JSON.parse(out).accessToken;
+}
+
+function decodeJwt(token) {
+  const payload = token.split('.')[1];
+  const json = Buffer.from(payload.replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('utf8');
+  return JSON.parse(json);
+}
+
+async function armGet(url, token) {
+  const r = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+  const body = await r.json();
+  if (!r.ok) throw new Error(body.error?.message || `ARM request failed (${r.status})`);
+  return body;
+}
+
+async function armPut(url, token, payload) {
+  const r = await fetch(url, {
+    method: 'PUT',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  const body = await r.json();
+  if (!r.ok) throw new Error(body.error?.message || `ARM request failed (${r.status})`);
+  return body;
+}
+
+app.post('/api/pim/activate', async (req, res) => {
+  const { items = [], durationHours, justification, ticketNumber, ticketSystem } = req.body;
+  if (!items.length) return res.status(400).json({ error: 'No subscriptions provided' });
+  if (!justification || !ticketNumber) return res.status(400).json({ error: 'Justification and ticket number are required' });
+  for (const it of items) {
+    if (!PIM_ROLE_IDS[it.role]) return res.status(400).json({ error: `Unsupported role: ${it.role}` });
+  }
+
+  let token, principalId;
+  try {
+    token = getAzToken();
+    principalId = decodeJwt(token).oid;
+  } catch (e) {
+    return res.status(500).json({ error: e.message });
+  }
+
+  const duration = `PT${Number(durationHours) || 8}H`;
+  const results = [];
+
+  for (const { subscriptionId: subId, role } of items) {
+    const roleId = PIM_ROLE_IDS[role];
+    try {
+      const list = await armGet(
+        `https://management.azure.com/subscriptions/${subId}/providers/Microsoft.Authorization/roleEligibilityScheduleInstances?api-version=2020-10-01&$filter=asTarget()`,
+        token
+      );
+      const eligible = (list.value || []).find(i =>
+        i.properties.roleDefinitionId.toLowerCase().endsWith('/' + roleId) &&
+        i.properties.status === 'Eligible'
+      );
+      if (!eligible) {
+        results.push({ subscriptionId: subId, role, ok: false, message: `No eligible ${role} role assignment found for this subscription` });
+        continue;
+      }
+      const requestName = crypto.randomUUID();
+      await armPut(
+        `https://management.azure.com/subscriptions/${subId}/providers/Microsoft.Authorization/roleAssignmentScheduleRequests/${requestName}?api-version=2020-10-01`,
+        token,
+        {
+          properties: {
+            principalId,
+            requestType: 'SelfActivate',
+            roleDefinitionId: eligible.properties.roleDefinitionId,
+            linkedRoleEligibilityScheduleId: eligible.properties.roleEligibilityScheduleId,
+            justification,
+            ticketInfo: { ticketNumber, ticketSystem: ticketSystem || '' },
+            scheduleInfo: {
+              startDateTime: new Date().toISOString(),
+              expiration: { type: 'AfterDuration', duration },
+            },
+          },
+        }
+      );
+      results.push({ subscriptionId: subId, role, ok: true, message: `${role} role activated for ${Number(durationHours) || 8}h` });
+    } catch (e) {
+      results.push({ subscriptionId: subId, role, ok: false, message: e.message });
+    }
+  }
+
+  res.json({ results });
 });
 
 app.listen(PORT, () => {
