@@ -14,9 +14,19 @@
 :root{
   --bg:#0d1117;--sidebar:#010409;--header:#161b22;--panel:#161b22;
   --border:#30363d;--accent:#7c3aed;--accent2:#a78bfa;
-  --text:#e6edf3;--text2:#8b949e;--text3:#484f58;
+  --text:#ffffff;--text2:#8b949e;--text3:#484f58;
   --hover:#1d2433;--active-bg:#3d1f8a;--active-text:#c4b5fd;
   --green:#3fb950;--yellow:#d29922;--blue:#58a6ff;--red:#f85149;
+  --subtle:#21262d;--subtle2:#1a1f27;
+}
+body.light{
+  --bg:#ffffff;--sidebar:#f3f2f1;--header:#ffffff;--panel:#ffffff;
+  --border:#e1dfdd;--accent:#7c3aed;--accent2:#5b21b6;
+  --text:#000000;--text2:#605e5c;--text3:#a19f9d;
+  --hover:#ede9fe;--active-bg:#ddd6fe;--active-text:#5b21b6;
+  --green:#107c10;--yellow:#9a6700;--blue:#0078d4;--red:#d13438;
+  --subtle:#f3f2f1;--subtle2:#e1dfdd;
+  --at-text:#000000;
 }
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);height:100vh;display:flex;flex-direction:column;overflow:hidden;font-size:14px}
 
@@ -26,6 +36,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .logo-dot{width:8px;height:8px;border-radius:50%;background:linear-gradient(135deg,#7c3aed,#3b82f6);flex-shrink:0}
 #btn-open{background:linear-gradient(135deg,#7c3aed,#5b21b6);color:#fff;border:none;padding:6px 14px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;transition:opacity .15s;white-space:nowrap;flex-shrink:0}
 #btn-open:hover{opacity:.85}
+#btn-start-db{background:var(--subtle);border:1px solid var(--border);color:var(--text2);padding:6px 14px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;flex-shrink:0}
+#btn-start-db:hover{border-color:var(--accent2);color:var(--text)}
+#btn-start-db.running{border-color:var(--green);color:var(--green)}
 #hdr-info{font-size:12px;color:var(--text3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0}
 
 /* Edit-mode header actions */
@@ -49,7 +62,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 #sb{width:280px;min-width:180px;max-width:500px;background:var(--sidebar);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;flex-shrink:0}
 #sb-top{padding:10px;border-bottom:1px solid var(--border)}
 .search-box{position:relative}
-.search-box input{width:100%;background:#0d1117;border:1px solid var(--border);border-radius:8px;padding:7px 10px 7px 32px;color:var(--text);font-size:13px;outline:none;transition:border-color .15s}
+.search-box input{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:7px 10px 7px 32px;color:var(--text);font-size:13px;outline:none;transition:border-color .15s}
 .search-box input:focus{border-color:var(--accent)}
 .search-box input::placeholder{color:var(--text3)}
 .s-icon{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:13px;pointer-events:none}
@@ -60,9 +73,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 #tree::-webkit-scrollbar-track{background:transparent}
 
 /* ── Folder sections ── */
-.fsec{border-bottom:1px solid #1a1f27}
+.fsec{border-bottom:1px solid var(--subtle2)}
 .fhdr{display:flex;align-items:center;gap:5px;padding:8px 8px 8px 6px;cursor:pointer;position:sticky;top:0;z-index:5;background:var(--sidebar)}
-.fhdr:hover{background:#0d1117}
+.fhdr:hover{background:var(--bg)}
 .fhdr-chev{background:none;border:none;color:var(--text3);font-size:9px;width:12px;transition:transform .15s;flex-shrink:0;cursor:pointer;padding:0}
 .fhdr-chev.open{transform:rotate(90deg)}
 .fhdr-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
@@ -87,17 +100,17 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .item-acts{display:none;margin-left:auto;flex-shrink:0;gap:1px;align-items:center}
 .tree-item:hover .item-acts{display:flex}
 .dir-add{width:18px;height:18px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:var(--text3);cursor:pointer;line-height:1}
-.dir-add:hover{background:#21262d;color:var(--accent2)}
+.dir-add:hover{background:var(--subtle);color:var(--accent2)}
 .item-fav,.item-del{width:18px;height:18px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--text3);cursor:pointer;line-height:1}
 .item-fav:hover,.item-fav.active{color:#f59e0b}
-.item-del:hover{background:#21262d;color:var(--red)}
+.item-del:hover{background:var(--subtle);color:var(--red)}
 
 /* ── Inline create row ── */
 .create-row{gap:4px;cursor:default;background:transparent!important}
 .create-row:hover{background:transparent!important}
 .cr-toggle{background:none;border:1px solid var(--border);border-radius:4px;cursor:pointer;padding:1px 5px;font-size:12px;flex-shrink:0;color:var(--text2)}
 .cr-toggle:hover{border-color:var(--accent2)}
-.cr-input{flex:1;min-width:0;background:#0d1117;border:1px solid var(--accent);border-radius:5px;padding:3px 8px;color:var(--text);font-size:12px;outline:none;font-family:inherit}
+.cr-input{flex:1;min-width:0;background:var(--bg);border:1px solid var(--accent);border-radius:5px;padding:3px 8px;color:var(--text);font-size:12px;outline:none;font-family:inherit}
 .cr-ok,.cr-cancel{background:none;border:none;cursor:pointer;color:var(--text2);font-size:13px;padding:2px 4px;border-radius:4px;flex-shrink:0}
 .cr-ok:hover{color:var(--green)}
 .cr-cancel:hover{color:var(--red)}
@@ -116,7 +129,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 #c-hdr{height:44px;background:var(--panel);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 14px;gap:8px;flex-shrink:0;display:none}
 .c-icon{font-size:16px;flex-shrink:0}
 .c-name{font-weight:600;color:var(--text);font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:260px}
-.c-badge{font-size:10px;font-weight:700;padding:2px 7px;border-radius:12px;background:#21262d;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;flex-shrink:0}
+.c-badge{font-size:10px;font-weight:700;padding:2px 7px;border-radius:12px;background:var(--subtle);color:var(--text2);text-transform:uppercase;letter-spacing:.04em;flex-shrink:0}
 .c-path{font-size:11px;color:var(--text3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0}
 #edit-btn{margin-left:auto;padding:4px 12px;background:none;border:1px solid var(--border);border-radius:6px;color:var(--text2);font-size:12px;cursor:pointer;flex-shrink:0;display:none}
 #edit-btn:hover{border-color:var(--accent2);color:var(--accent2)}
@@ -129,7 +142,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 
 /* ── Edit body ── */
 #edit-body{display:none;flex:1;flex-direction:column;overflow:hidden}
-#edit-area{flex:1;width:100%;background:#0d1117;color:#adbac7;border:none;padding:20px 24px;font-family:'JetBrains Mono','Fira Code',Consolas,monospace;font-size:13.5px;line-height:1.75;resize:none;outline:none;tab-size:2;overflow:auto}
+#edit-area{flex:1;width:100%;background:var(--bg);color:#adbac7;border:none;padding:20px 24px;font-family:'JetBrains Mono','Fira Code',Consolas,monospace;font-size:13.5px;line-height:1.75;resize:none;outline:none;tab-size:2;overflow:auto}
 #edit-area::-webkit-scrollbar{width:6px}
 #edit-area::-webkit-scrollbar-thumb{background:#30363d;border-radius:4px}
 
@@ -138,7 +151,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .welcome .w-icon{font-size:56px;opacity:.25}
 .welcome h2{font-size:20px;font-weight:700;color:#484f58}
 .welcome p{font-size:13px;max-width:340px;line-height:1.75;color:var(--text3)}
-.welcome .tip{background:#161b22;border:1px solid var(--border);border-radius:8px;padding:12px 16px;font-size:12px;color:var(--text2);line-height:1.8;max-width:340px;text-align:left;margin-top:4px}
+.welcome .tip{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:12px 16px;font-size:12px;color:var(--text2);line-height:1.8;max-width:340px;text-align:left;margin-top:4px}
 .welcome .tip b{color:var(--accent2)}
 
 /* ── Markdown ── */
@@ -146,35 +159,35 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .md h1,.md h2,.md h3,.md h4{color:var(--text);font-weight:700;margin:28px 0 12px;line-height:1.3}
 .md h1{font-size:28px}.md h2{font-size:22px;border-bottom:1px solid var(--border);padding-bottom:8px}.md h3{font-size:18px}.md h4{font-size:15px}
 .md p{margin:0 0 16px}.md a{color:var(--blue)}.md a:hover{text-decoration:underline}
-.md code{background:#21262d;padding:2px 6px;border-radius:5px;font-size:13px;color:#a5d6ff;font-family:'JetBrains Mono','Fira Code',Consolas,monospace}
+.md code{background:var(--subtle);padding:2px 6px;border-radius:5px;font-size:13px;color:#a5d6ff;font-family:'JetBrains Mono','Fira Code',Consolas,monospace}
 .md pre{margin:16px 0;border-radius:10px;overflow:hidden}.md pre code{background:none;padding:0;color:inherit;font-size:13px}
-.md blockquote{border-left:3px solid var(--accent2);margin:16px 0;padding:10px 16px;background:#161b22;border-radius:0 8px 8px 0;color:var(--text2)}
+.md blockquote{border-left:3px solid var(--accent2);margin:16px 0;padding:10px 16px;background:var(--panel);border-radius:0 8px 8px 0;color:var(--text2)}
 .md ul,.md ol{padding-left:24px;margin:0 0 16px}.md li{margin-bottom:6px}
-.md table{border-collapse:collapse;width:100%;margin:16px 0;font-size:13px}.md th,.md td{border:1px solid var(--border);padding:8px 14px}.md th{background:#21262d;color:var(--text2);font-weight:600}.md tr:hover td{background:#1d2433}
+.md table{border-collapse:collapse;width:100%;margin:16px 0;font-size:13px}.md th,.md td{border:1px solid var(--border);padding:8px 14px}.md th{background:var(--subtle);color:var(--text2);font-weight:600}.md tr:hover td{background:var(--hover)}
 .md img{max-width:100%;border-radius:8px;margin:8px 0}.md hr{border:none;border-top:1px solid var(--border);margin:24px 0}
 
 /* ── Code ── */
-.code-wrap{background:#161b22;border-radius:12px;overflow:hidden;border:1px solid var(--border)}
-.code-bar{background:#21262d;padding:8px 16px;display:flex;align-items:center;justify-content:space-between;font-size:12px;border-bottom:1px solid var(--border)}
+.code-wrap{background:var(--panel);border-radius:12px;overflow:hidden;border:1px solid var(--border)}
+.code-bar{background:var(--subtle);padding:8px 16px;display:flex;align-items:center;justify-content:space-between;font-size:12px;border-bottom:1px solid var(--border)}
 .code-lang{color:var(--accent2);font-weight:700}.code-meta{color:var(--text3)}
-.code-wrap pre{padding:20px;overflow-x:auto;background:#161b22!important;margin:0}
+.code-wrap pre{padding:20px;overflow-x:auto;background:var(--panel)!important;margin:0}
 .code-wrap pre code{font-family:'JetBrains Mono','Fira Code',Consolas,monospace;font-size:13px;line-height:1.6;background:transparent!important}
 
 /* ── Table ── */
 .sheet-tabs{display:flex;gap:4px;margin-bottom:14px;flex-wrap:wrap}
-.stab{padding:5px 12px;border-radius:6px;font-size:12px;cursor:pointer;color:var(--text2);background:#21262d;border:1px solid var(--border);transition:all .1s}
+.stab{padding:5px 12px;border-radius:6px;font-size:12px;cursor:pointer;color:var(--text2);background:var(--subtle);border:1px solid var(--border);transition:all .1s}
 .stab:hover{color:var(--text)}.stab.active{background:var(--accent);color:#fff;border-color:var(--accent)}
 .sheet-pager{display:flex;align-items:center;gap:14px;margin-bottom:10px;flex-wrap:wrap;font-size:12.5px;color:var(--text2)}
 .pager-btns{display:flex;align-items:center;gap:6px}
-.pager-btns button{background:#21262d;color:var(--text2);border:1px solid var(--border);border-radius:6px;padding:4px 10px;font-size:12px;cursor:pointer}
+.pager-btns button{background:var(--subtle);color:var(--text2);border:1px solid var(--border);border-radius:6px;padding:4px 10px;font-size:12px;cursor:pointer}
 .pager-btns button:hover:not(:disabled){color:var(--text);border-color:var(--accent)}
 .pager-btns button:disabled{opacity:.4;cursor:default}
 .pager-page{padding:0 4px;white-space:nowrap}
-.sheet-pager select{background:#21262d;color:var(--text2);border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:12px;cursor:pointer}
+.sheet-pager select{background:var(--subtle);color:var(--text2);border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:12px;cursor:pointer}
 .tbl-wrap{overflow:auto;max-height:calc(100vh - 160px);border-radius:10px;border:1px solid var(--border)}
 .sheet-tbl{border-collapse:collapse;font-size:13px;min-width:100%;white-space:nowrap}
-.sheet-tbl th{background:#21262d;color:var(--text2);font-weight:600;padding:9px 14px;text-align:left;border:1px solid var(--border);position:sticky;top:0;z-index:2}
-.sheet-tbl td{padding:7px 14px;border:1px solid #21262d;color:#cdd9e5}.sheet-tbl tr:hover td{background:#1d2433}
+.sheet-tbl th{background:var(--subtle);color:var(--text);font-weight:600;padding:9px 14px;text-align:left;border:1px solid var(--border);position:sticky;top:0;z-index:2}
+.sheet-tbl td{padding:7px 14px;border:1px solid var(--subtle);color:var(--text)}.sheet-tbl tr:hover td{background:var(--hover)}
 .rn{color:var(--text3)!important;text-align:right!important;user-select:none}
 
 /* ── Images / media ── */
@@ -199,7 +212,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .no-view{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:60px 20px;color:var(--text3);text-align:center}
 .no-icon{font-size:56px;opacity:.3}.no-view h3{font-size:17px;color:#484f58}.no-view p{font-size:13px;max-width:320px;line-height:1.6}
 .loading{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:60px;color:var(--text3)}
-.spinner{width:32px;height:32px;border:3px solid #21262d;border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite}
+.spinner{width:32px;height:32px;border:3px solid var(--subtle);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 mark{background:rgba(124,58,237,.25);color:var(--accent2);border-radius:2px}
 
@@ -209,16 +222,16 @@ mark{background:rgba(124,58,237,.25);color:var(--accent2);border-radius:2px}
 .fw-add-btn:hover{opacity:.85}
 .fw-count{font-size:12px;color:var(--text3)}
 .fw-tbl td{padding:2px}
-.fw-input{width:100%;background:transparent;border:1px solid transparent;color:#cdd9e5;font-size:12px;padding:6px 7px;border-radius:4px;font-family:inherit;outline:none}
+.fw-input{width:100%;background:transparent;border:1px solid transparent;color:var(--text);font-size:12px;padding:6px 7px;border-radius:4px;font-family:inherit;outline:none}
 .fw-input:hover{border-color:var(--border)}
-.fw-input:focus{border-color:var(--accent);background:#0d1117}
+.fw-input:focus{border-color:var(--accent);background:var(--bg)}
 select.fw-input{cursor:pointer}
 .fw-del{background:none;border:none;color:var(--text3);cursor:pointer;font-size:13px;padding:4px 8px;border-radius:4px}
-.fw-del:hover{color:var(--red);background:#21262d}
+.fw-del:hover{color:var(--red);background:var(--subtle)}
 
 /* ── Reconnect folder ── */
 .reconnect-wrap{padding:8px 12px}
-.reconnect-btn{width:100%;background:#21262d;border:1px solid var(--border);color:var(--text2);padding:8px;border-radius:6px;font-size:12px;cursor:pointer;transition:all .15s}
+.reconnect-btn{width:100%;background:var(--subtle);border:1px solid var(--border);color:var(--text2);padding:8px;border-radius:6px;font-size:12px;cursor:pointer;transition:all .15s}
 .reconnect-btn:hover{border-color:var(--accent2);color:var(--accent2)}
 
 /* ── Search result flash ── */
@@ -226,14 +239,14 @@ select.fw-input{cursor:pointer}
 .flash{animation:flashHighlight 1.2s ease-out}
 
 /* ── Firewall / Timesheet table extras ── */
-.fw-filter-input{background:#0d1117;border:1px solid var(--border);border-radius:6px;padding:6px 10px;color:var(--text);font-size:12px;outline:none;width:120px}
+.fw-filter-input{background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:6px 10px;color:var(--text);font-size:12px;outline:none;width:120px}
 .fw-filter-input:focus{border-color:var(--accent)}
 .fw-clear-btn{background:none;border:1px solid var(--border);color:var(--text2);padding:6px 12px;border-radius:6px;font-size:12px;cursor:pointer;white-space:nowrap}
 .fw-clear-btn:hover{border-color:var(--accent2);color:var(--accent2)}
-.fw-export-btn{background:#21262d;border:1px solid var(--border);color:var(--text2);padding:7px 14px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap}
+.fw-export-btn{background:var(--subtle);border:1px solid var(--border);color:var(--text2);padding:7px 14px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap}
 .fw-export-btn:hover{color:var(--text);border-color:var(--accent2)}
-.fw-bulkbar{display:flex;align-items:center;gap:10px;background:#1d2433;border:1px solid var(--accent);border-radius:8px;padding:8px 12px;margin-bottom:10px;font-size:12px;color:var(--text2);flex-wrap:wrap}
-.fw-bulk-btn{background:#21262d;border:1px solid var(--border);color:var(--text2);padding:5px 12px;border-radius:6px;font-size:12px;cursor:pointer}
+.fw-bulkbar{display:flex;align-items:center;gap:10px;background:var(--hover);border:1px solid var(--accent);border-radius:8px;padding:8px 12px;margin-bottom:10px;font-size:12px;color:var(--text2);flex-wrap:wrap}
+.fw-bulk-btn{background:var(--subtle);border:1px solid var(--border);color:var(--text2);padding:5px 12px;border-radius:6px;font-size:12px;cursor:pointer}
 .fw-bulk-btn:hover{color:var(--text);border-color:var(--accent2)}
 .fw-bulk-btn.danger:hover{color:var(--red);border-color:var(--red)}
 .fw-icon-btn{background:none;border:1px solid var(--border);color:var(--text2);width:26px;height:26px;border-radius:6px;cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center}
@@ -241,47 +254,55 @@ select.fw-input{cursor:pointer}
 .fw-icon-btn.del:hover{color:var(--red);border-color:var(--red)}
 .fw-icon-btn.save:hover{color:var(--green);border-color:var(--green)}
 .fw-icon-btn.cancel:hover{color:var(--red);border-color:var(--red)}
-.fw-status-badge{font-size:11px;font-weight:600;padding:3px 10px;border-radius:12px;background:#21262d;color:var(--text2)}
+.fw-status-badge{font-size:11px;font-weight:600;padding:3px 10px;border-radius:12px;background:var(--subtle);color:var(--text2)}
 .fw-status-impl{background:rgba(63,185,80,.15);color:var(--green)}
 .fw-status-pend{background:rgba(210,153,34,.15);color:var(--yellow)}
 .fw-cell{max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.ts-nav-btn{background:#21262d;border:1px solid var(--border);color:var(--text2);width:30px;height:30px;border-radius:6px;cursor:pointer;font-size:13px}
+.ts-nav-btn{background:var(--subtle);border:1px solid var(--border);color:var(--text2);width:30px;height:30px;border-radius:6px;cursor:pointer;font-size:13px}
 .ts-nav-btn:hover{color:var(--text);border-color:var(--accent2)}
 .ts-hours{text-align:center}
 .ts-over{color:var(--red);font-weight:700}
 
 /* ── Action Tracker ── */
+.at-section,.at-action,.at-sub-item{font-family:Calibri,'Segoe UI',sans-serif;font-size:10pt;color:var(--text)}
 .at-section{margin-bottom:14px}
-.at-section-hdr{display:flex;align-items:center;gap:8px;padding:10px 12px;background:#161b22;border:1px solid var(--border);border-radius:8px}
+.at-section-hdr{display:flex;align-items:center;gap:8px;padding:10px 12px;background:var(--panel);border:1px solid var(--border);border-radius:8px}
 .at-section-hdr .ti-chev{cursor:pointer}
 .at-section-name{font-weight:600;font-size:14px;flex:1}
 .at-actions-wrap{padding:10px 0 4px 22px}
-.at-action{border:1px solid var(--border);border-radius:8px;margin-bottom:8px;background:#0d1117;padding:8px 12px}
+.at-action{border:1px solid var(--border);border-radius:8px;margin-bottom:8px;background:var(--bg);padding:8px 12px}
 .at-action-hdr{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .at-action-hdr .ti-chev{cursor:pointer}
 .at-title{font-weight:500;flex:1;min-width:120px}
-.at-owner{font-size:11px;color:var(--text2);background:#21262d;padding:2px 8px;border-radius:10px;white-space:nowrap}
+.at-owner{font-size:11px;color:var(--text2);background:var(--subtle);padding:2px 8px;border-radius:10px;white-space:nowrap}
 .at-due{font-size:12px;color:var(--text3);white-space:nowrap}
 .at-overdue{color:var(--red);font-weight:600}
 .at-acts{display:flex;gap:4px;margin-left:auto}
 .at-comment{font-size:12px;color:var(--text3);margin-top:6px;padding-left:24px;white-space:pre-wrap}
 .at-comment-edit{margin-top:6px}
 .at-sub-wrap{margin-top:8px;padding:8px 0 0 24px;border-top:1px dashed var(--border)}
-.at-sub-item{padding:6px 0;border-bottom:1px dashed #21262d}
+.at-sub-item{padding:6px 0;border-bottom:1px dashed var(--subtle)}
 .at-sub-item:last-of-type{border-bottom:none}
 .at-sub-hdr{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .at-sub-bullet{color:var(--text3)}
 .at-edit-grid{display:flex;gap:8px;flex:1;flex-wrap:wrap}
 .at-edit-grid input,.at-edit-grid select{flex:1;min-width:110px}
-.at-status-notstarted{background:#21262d;color:var(--text2)}
+.at-status-notstarted{background:var(--subtle);color:var(--text2)}
 .at-status-inprogress{background:rgba(88,166,255,.15);color:var(--blue)}
 .at-status-completed{background:rgba(63,185,80,.15);color:var(--green)}
 .at-status-blocked{background:rgba(248,81,73,.15);color:var(--red)}
 .at-status-onhold{background:rgba(210,153,34,.15);color:var(--yellow)}
+.at-priority-high{background:rgba(248,81,73,.15);color:var(--red)}
+.at-priority-medium{background:rgba(210,153,34,.15);color:var(--yellow)}
+.at-priority-low{background:rgba(63,185,80,.15);color:var(--green)}
+.at-priority-unassigned{background:var(--subtle);color:var(--text3)}
+.at-toggle-btn{background:var(--subtle);border:1px solid var(--border);color:var(--text2);padding:6px 12px;border-radius:6px;cursor:pointer;font-size:12px}
+.at-toggle-btn:hover{border-color:var(--accent2);color:var(--text)}
+.at-toggle-btn.active{background:var(--accent);color:#fff;border-color:var(--accent)}
 
 /* ── Sidebar collapse ── */
-#btn-collapse{background:none;border:1px solid var(--border);color:var(--text2);width:30px;height:30px;border-radius:8px;cursor:pointer;font-size:13px;flex-shrink:0;display:flex;align-items:center;justify-content:center}
-#btn-collapse:hover{border-color:var(--accent2);color:var(--accent2)}
+#btn-collapse,#btn-theme{background:none;border:1px solid var(--border);color:var(--text2);width:30px;height:30px;border-radius:8px;cursor:pointer;font-size:13px;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+#btn-collapse:hover,#btn-theme:hover{border-color:var(--accent2);color:var(--accent2)}
 #sb.collapsed{display:none}
 </style>
 </head>
@@ -290,6 +311,8 @@ select.fw-input{cursor:pointer}
 <div id="hdr">
   <div class="logo"><div class="logo-dot"></div>FileView</div>
   <button id="btn-collapse" onclick="toggleSidebar()" title="Collapse sidebar">⬅</button>
+  <button id="btn-theme" onclick="toggleTheme()" title="Toggle light/dark theme">🌙</button>
+  <button id="btn-start-db" onclick="startDatabase()" title="Check the local database server, or download a launcher to start it">▶ Start Database</button>
   <button id="btn-open" onclick="addFolder()" title="Add folder to workspace (Ctrl+O)">📂 Open Folder</button>
   <span id="hdr-info">No folder open</span>
   <div id="hdr-edit">
@@ -395,6 +418,9 @@ let xlsData=null;
 let xlsSheetIndex=0;
 let xlsPage=0;
 let xlsPageSize=200;
+let xlsSearchQuery='';
+let xlsSortCol=null;
+let xlsSortOrder='asc';
 let blobs=[];
 let currentToolKey=null; // 'timesheet'|'buildsheet'|'firewall'|null when a Tools workspace item is open
 let favouritesData=[];   // [{id,type,label,icon,sp,folderId,folderName,path,toolKey}]
@@ -431,8 +457,28 @@ async function apiDelete(path){
   if(!r.ok)throw new Error('API error '+r.status);
   return r.json();
 }
+async function startDatabase(){
+  const btn=document.getElementById('btn-start-db');
+  btn.disabled=true;btn.textContent='⏳ Checking...';
+  try{
+    await apiGet('/firewall-rules');
+    btn.classList.add('running');
+    btn.textContent='✅ Database Running';
+    setTimeout(()=>{btn.textContent='▶ Start Database';btn.classList.remove('running');btn.disabled=false;},3000);
+  }catch(e){
+    btn.disabled=false;btn.textContent='▶ Start Database';
+    const bat="@echo off\r\ncd /d \"%~dp0server\"\r\nif not exist node_modules (\r\n  echo Installing dependencies...\r\n  call npm install\r\n)\r\necho Starting FileView database server on http://localhost:3420 ...\r\nnode server.js\r\npause\r\n";
+    const blob=new Blob([bat],{type:'text/plain'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url;a.download='start-server.bat';
+    document.body.appendChild(a);a.click();document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    alert('⚠️ The database server is not running.\n\nA "start-server.bat" file has been downloaded. Move it into this project\'s root folder (next to the "server" folder) if needed, then double-click it to start the database.\n\nOnce it\'s running, click "▶ Start Database" again to confirm.');
+  }
+}
 function backendErrorHTML(msg){
-  return `<div class="no-view"><div class="no-icon">🔌</div><h3>Backend not reachable</h3><p>${esc(msg||'Could not connect to the local server.')}</p><p style="margin-top:10px">Start it with:</p><p style="margin-top:6px"><code style="background:#21262d;padding:6px 10px;border-radius:6px;display:inline-block;color:#a5d6ff">cd server &amp;&amp; npm install &amp;&amp; node server.js</code></p><button onclick="openToolFile(currentToolKey)" style="margin-top:18px;background:var(--accent);color:#fff;border:none;padding:8px 18px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">Retry</button></div>`;
+  return `<div class="no-view"><div class="no-icon">🔌</div><h3>Backend not reachable</h3><p>${esc(msg||'Could not connect to the local server.')}</p><p style="margin-top:10px">Start it with:</p><p style="margin-top:6px"><code style="background:var(--subtle);padding:6px 10px;border-radius:6px;display:inline-block;color:#a5d6ff">cd server &amp;&amp; npm install &amp;&amp; node server.js</code></p><button onclick="openToolFile(currentToolKey)" style="margin-top:18px;background:var(--accent);color:#fff;border:none;padding:8px 18px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">Retry</button></div>`;
 }
 const FIREWALL_COLUMNS=[
   {key:'ruleId',label:'Rule ID',w:90},
@@ -1278,6 +1324,7 @@ const TS_MAX_DAILY=7.5;
 let tsRows=[];
 let tsEditingId=null;
 let tsWeekStart=getMonday(new Date());
+let tsPreviousWeekRows=null; // Store previous week's data for copy functionality
 
 function getMonday(d){
   const date=new Date(d);
@@ -1316,6 +1363,13 @@ async function renderTimesheetTable(){
     setView(backendErrorHTML(e.message));
     return;
   }
+  // Fetch previous week for copy functionality (optional - don't fail if not found)
+  try{
+    const prevWeekStart=new Date(tsWeekStart);prevWeekStart.setDate(prevWeekStart.getDate()-7);
+    tsPreviousWeekRows=await apiGet('/timesheet?week='+fmtDateISO(prevWeekStart));
+  }catch(e){
+    tsPreviousWeekRows=[]; // If previous week doesn't exist, set empty array
+  }
   drawTimesheetTable();
 }
 
@@ -1328,66 +1382,82 @@ function drawTimesheetTable(){
       <button class="ts-nav-btn" onclick="shiftTsWeek(1)" title="Next week">▶</button>
       <button class="fw-clear-btn" onclick="tsThisWeek()">This week</button>
       <div class="fw-count">Week of ${tsWeekLabel()}</div>
-    </div>
-    <div style="display:flex;gap:8px">
+    </div>`;
+  
+  if(tsEditingId==='ALL'){
+    html+=`<div style="display:flex;gap:8px">
+      <button class="fw-icon-btn save" title="Save all changes" onclick="saveAllTimesheetRows()" style="width:auto;padding:0 12px">✅ Save All</button>
+      <button class="fw-icon-btn cancel" title="Cancel bulk edit" onclick="cancelAllTimesheetEdit()" style="width:auto;padding:0 12px">✖ Cancel</button>
+    </div>`;
+  }else{
+    html+=`<div style="display:flex;gap:8px">
       <button class="fw-export-btn" onclick="exportTimesheetExcel()">⬇ Export Excel</button>
-      <button class="fw-export-btn" onclick="emailTimesheet()">✉ Email</button>
+      <button class="fw-export-btn" onclick="copyFromPreviousWeek()" title="Copy Project Code, Description, and Manager from previous week" ${!tsPreviousWeekRows||!tsPreviousWeekRows.length?'disabled':''}>${tsPreviousWeekRows&&tsPreviousWeekRows.length?'📋 Copy from Previous Week':'No Previous Data'}</button>
+      <button class="fw-add-btn" onclick="editAllTimesheetRows()">✎ Edit All</button>
       <button class="fw-add-btn" onclick="addTimesheetRow()">+ Add Row</button>
-    </div>
-  </div>`;
+    </div>`;
+  }
+  
+  html+=`</div>`;
 
   html+=`<div class="tbl-wrap"><table class="sheet-tbl fw-tbl"><thead><tr>
-    <th style="min-width:160px">Project Manager</th>
-    <th style="min-width:120px">Project Code</th>`;
+    <th style="min-width:120px;padding-left:20px">Project Code</th>
+    <th style="min-width:160px;padding-left:20px">Description</th>
+    <th style="min-width:160px">Project Manager</th>`;
   TS_DAYS.forEach(([k,label],i)=>{
     const d=new Date(tsWeekStart);d.setDate(d.getDate()+i);
-    html+=`<th style="min-width:70px">${label}<br><span style="font-weight:400;color:var(--text3)">${fmtDateShort(d)}</span></th>`;
+    html+=`<th style="min-width:70px;text-align:center">${label}<br><span style="font-weight:400;color:var(--text3)">${fmtDateShort(d)}</span></th>`;
   });
-  html+=`<th style="min-width:70px">Total</th><th style="min-width:160px">Notes</th><th style="width:80px">Actions</th></tr></thead><tbody>`;
+  html+=`<th style="width:80px">Actions</th></tr></thead><tbody>`;
 
   if(!tsRows.length){
-    html+=`<tr><td colspan="${2+TS_DAYS.length+3}" style="text-align:center;color:var(--text3);padding:24px">No timesheet entries for this week.</td></tr>`;
+    html+=`<tr><td colspan="${2+TS_DAYS.length+2}" style="text-align:center;color:var(--text3);padding:24px">No timesheet entries for this week.</td></tr>`;
   }
 
   const totals={mon:0,tue:0,wed:0,thu:0,fri:0,sat:0,sun:0};
   tsRows.forEach(row=>{
-    const editing=tsEditingId===row.id;
+    const editing=tsEditingId===row.id||tsEditingId==='ALL';
     let rowTotal=0;
     html+='<tr>';
     if(!editing){
-      html+=`<td><div class="fw-cell">${esc(row.projectManager||'')}</div></td>`;
-      html+=`<td><div class="fw-cell">${esc(row.projectCode||'')}</div></td>`;
+      html+=`<td style=\"padding-left:20px;padding-right:8px\"><div class=\"fw-cell\">${esc(row.projectCode||'')}</div></td>`;
+      html+=`<td style=\"padding-left:20px;padding-right:8px\"><div class=\"fw-cell\">${esc(row.projectDescription||row.description||'')}</div></td>`;
+      html+=`<td style=\"padding-left:8px\">👤 ${esc(row.projectManager||'')}</td>`;
     }else{
-      html+=`<td><input class="fw-input" id="tsf-${row.id}-projectManager" type="text" value="${esc(row.projectManager||'')}"/></td>`;
-      html+=`<td><input class="fw-input" id="tsf-${row.id}-projectCode" type="text" value="${esc(row.projectCode||'')}"/></td>`;
+      html+=`<td style=\"padding:0\"><input class=\"fw-input\" id=\"tsf-${row.id}-projectCode\" type=\"text\" style=\"padding-left:20px\" value=\"${esc(row.projectCode||'')}\"/></td>`;
+      html+=`<td style=\"padding:0\"><input class=\"fw-input\" id=\"tsf-${row.id}-projectDescription\" type=\"text\" style=\"padding-left:20px\" value=\"${esc(row.projectDescription||row.description||'')}\"/></td>`;
+      html+=`<td style=\"padding:0\"><input class=\"fw-input\" id=\"tsf-${row.id}-projectManager\" type=\"text\" style=\"padding-left:8px\" value=\"${esc(row.projectManager||'')}\"/></td>`;
     }
     TS_DAYS.forEach(([k])=>{
       const v=Number(row[k]||0);
       rowTotal+=v;totals[k]+=v;
       const over=v>TS_MAX_DAILY;
-      if(!editing)html+=`<td class="ts-hours${over?' ts-over':''}">${v||''}</td>`;
-      else html+=`<td><input class="fw-input ts-hours" id="tsf-${row.id}-${k}" type="number" min="0" step="0.5" value="${v}"/></td>`;
+      if(!editing)html+=`<td class=\"ts-hours${over?' ts-over':''}\" style=\"text-align:center;font-weight:600\">${v.toFixed(2)}</td>`;
+      else html+=`<td><input class=\"fw-input ts-hours\" id=\"tsf-${row.id}-${k}\" type=\"number\" min=\"0\" step=\"0.5\" value=\"${v}\"/></td>`;
     });
-    html+=`<td class="ts-hours" style="font-weight:600">${rowTotal}</td>`;
     if(!editing){
-      html+=`<td><div class="fw-cell">${esc(row.notes||'')}</div></td>`;
-      html+=`<td><div style="display:flex;gap:4px"><button class="fw-icon-btn" title="Edit" onclick="editTimesheetRow(${row.id})">✏️</button><button class="fw-icon-btn del" title="Delete" onclick="deleteTimesheetRow(${row.id})">🗑</button></div></td>`;
+      const rowIdx=tsRows.indexOf(row);
+      const isFirst=rowIdx===0;
+      const isLast=rowIdx===tsRows.length-1;
+      html+=`<td><div style=\"display:flex;gap:4px\"><button class=\"fw-icon-btn\" title=\"Move up\" onclick=\"moveRowUp(${row.id})\" ${isFirst?'disabled':''}>⬆</button><button class=\"fw-icon-btn\" title=\"Move down\" onclick=\"moveRowDown(${row.id})\" ${isLast?'disabled':''}>⬇</button><button class=\"fw-icon-btn\" title=\"Edit\" onclick=\"editTimesheetRow(${row.id})\">✏️</button><button class=\"fw-icon-btn del\" title=\"Delete\" onclick=\"deleteTimesheetRow(${row.id})\">🗑</button></div></td>`;
+    }else if(tsEditingId==='ALL'){
+      // When editing all, no individual row buttons yet
+      html+=`<td></td>`;
     }else{
-      html+=`<td><input class="fw-input" id="tsf-${row.id}-notes" type="text" value="${esc(row.notes||'')}"/></td>`;
-      html+=`<td><div style="display:flex;gap:4px"><button class="fw-icon-btn save" title="Save" onclick="saveTimesheetRow(${row.id})">✅</button><button class="fw-icon-btn cancel" title="Cancel" onclick="cancelTimesheetEdit(${row.id})">✖</button></div></td>`;
+      html+=`<td><div style=\"display:flex;gap:4px\"><button class=\"fw-icon-btn save\" title=\"Save\" onclick=\"saveTimesheetRow(${row.id})\">✅</button><button class=\"fw-icon-btn cancel\" title=\"Cancel\" onclick=\"cancelTimesheetEdit(${row.id})\">✖</button></div></td>`;
     }
     html+='</tr>';
   });
 
   if(tsRows.length){
-    html+='<tr style="font-weight:600;background:#1d2433"><td colspan="2">Daily Total</td>';
+    html+='<tr style="font-weight:600;background:var(--hover)"><td style="padding-left:20px">Daily Total</td><td></td><td></td>';
     let grand=0;
     TS_DAYS.forEach(([k])=>{
       grand+=totals[k];
       const over=totals[k]>TS_MAX_DAILY;
-      html+=`<td class="ts-hours${over?' ts-over':''}">${totals[k]||''}</td>`;
+      html+=`<td class="ts-hours${over?' ts-over':''}" style="text-align:center">${totals[k].toFixed(2)}</td>`;
     });
-    html+=`<td class="ts-hours">${grand}</td><td></td><td></td></tr>`;
+    html+=`<td></td></tr>`;
   }
 
   html+='</tbody></table></div>';
@@ -1406,7 +1476,7 @@ function editTimesheetRow(id){tsEditingId=id;drawTimesheetTable();}
 async function cancelTimesheetEdit(id){
   const row=tsRows.find(r=>r.id===id);
   tsEditingId=null;
-  const isBlank=row&&!row.projectManager&&!row.projectCode&&!row.notes&&TS_DAYS.every(([k])=>!Number(row[k]));
+  const isBlank=row&&!row.projectManager&&!row.projectCode&&!(row.projectDescription||row.description)&&TS_DAYS.every(([k])=>!Number(row[k]));
   if(isBlank){
     try{await apiDelete('/timesheet/'+id);}catch{}
     tsRows=tsRows.filter(r=>r.id!==id);
@@ -1417,8 +1487,8 @@ async function saveTimesheetRow(id){
   const fields={weekStart:fmtDateISO(tsWeekStart)};
   fields.projectManager=document.getElementById(`tsf-${id}-projectManager`).value;
   fields.projectCode=document.getElementById(`tsf-${id}-projectCode`).value;
+  fields.projectDescription=document.getElementById(`tsf-${id}-projectDescription`).value;
   TS_DAYS.forEach(([k])=>{fields[k]=Number(document.getElementById(`tsf-${id}-${k}`).value)||0;});
-  fields.notes=document.getElementById(`tsf-${id}-notes`).value;
   let row;
   try{row=await apiPut('/timesheet/'+id,fields);}
   catch(e){alert('Could not save row: '+e.message);return;}
@@ -1444,17 +1514,16 @@ function tsDailyTotals(){
 function exportTimesheetExcel(){
   const totals=tsDailyTotals();
   const data=tsRows.map(r=>{
-    const o={'Project Manager':r.projectManager||'','Project Code':r.projectCode||''};
+    const o={'Project Manager':r.projectManager||'','Project Code':r.projectCode||'','Description':r.projectDescription||r.description||''};
     let total=0;
     TS_DAYS.forEach(([k,label])=>{const v=Number(r[k]||0);total+=v;o[label]=v;});
     o['Total']=total;
-    o['Notes']=r.notes||'';
     return o;
   });
-  const totalsRow={'Project Manager':'Daily Total','Project Code':''};
+  const totalsRow={'Project Manager':'Daily Total','Project Code':'','Description':''};
   let grand=0;
   TS_DAYS.forEach(([k,label])=>{grand+=totals[k];totalsRow[label]=totals[k];});
-  totalsRow['Total']=grand;totalsRow['Notes']='';
+  totalsRow['Total']=grand;
   data.push(totalsRow);
   const ws=XLSX.utils.json_to_sheet(data);
   const wb=XLSX.utils.book_new();
@@ -1465,11 +1534,11 @@ function exportTimesheetExcel(){
 function emailTimesheet(){
   const totals=tsDailyTotals();
   let body=`Timesheet for week of ${tsWeekLabel()}\n\n`;
-  body+='Project Manager | Project Code | '+TS_DAYS.map(([,l])=>l).join(' | ')+' | Total | Notes\n';
+  body+='Project Manager | Project Code | Description | '+TS_DAYS.map(([,l])=>l).join(' | ')+' | Total\n';
   tsRows.forEach(r=>{
     let total=0;
     const days=TS_DAYS.map(([k])=>{const v=Number(r[k]||0);total+=v;return v||0;}).join(' | ');
-    body+=`${r.projectManager||''} | ${r.projectCode||''} | ${days} | ${total} | ${r.notes||''}\n`;
+    body+=`${r.projectManager||''} | ${r.projectCode||''} | ${r.projectDescription||r.description||''} | ${days} | ${total}\n`;
   });
   let grand=0;
   const dayTotals=TS_DAYS.map(([k])=>{grand+=totals[k];return totals[k]||0;}).join(' | ');
@@ -1480,18 +1549,147 @@ function emailTimesheet(){
   window.location.href=`mailto:?subject=${subject}&body=${encodeURIComponent(body)}`;
 }
 
+// Edit all rows at once
+function editAllTimesheetRows(){
+  tsEditingId='ALL';
+  drawTimesheetTable();
+}
+
+async function saveAllTimesheetRows(){
+  const updates=[];
+  for(const row of tsRows){
+    const fields={weekStart:fmtDateISO(tsWeekStart)};
+    fields.projectManager=document.getElementById(`tsf-${row.id}-projectManager`).value;
+    fields.projectCode=document.getElementById(`tsf-${row.id}-projectCode`).value;
+    fields.projectDescription=document.getElementById(`tsf-${row.id}-projectDescription`).value;
+    TS_DAYS.forEach(([k])=>{fields[k]=Number(document.getElementById(`tsf-${row.id}-${k}`).value)||0;});
+    updates.push(apiPut('/timesheet/'+row.id,fields));
+  }
+  try{
+    const results=await Promise.all(updates);
+    tsRows=results;
+    tsEditingId=null;
+    drawTimesheetTable();
+  }catch(e){
+    alert('Could not save all rows: '+e.message);
+  }
+}
+
+function cancelAllTimesheetEdit(){
+  tsEditingId=null;
+  drawTimesheetTable();
+}
+
+// Move rows up and down
+function moveRowUp(id){
+  const idx=tsRows.findIndex(r=>r.id===id);
+  if(idx>0){
+    [tsRows[idx-1],tsRows[idx]]=[tsRows[idx],tsRows[idx-1]];
+    drawTimesheetTable();
+  }
+}
+
+function moveRowDown(id){
+  const idx=tsRows.findIndex(r=>r.id===id);
+  if(idx<tsRows.length-1){
+    [tsRows[idx],tsRows[idx+1]]=[tsRows[idx+1],tsRows[idx]];
+    drawTimesheetTable();
+  }
+}
+
+// Copy project info from previous week
+async function copyFromPreviousWeek(){
+  if(!tsPreviousWeekRows||!tsPreviousWeekRows.length){
+    alert('No data available from previous week.');
+    return;
+  }
+  
+  if(!confirm(`Copy Project Code, Description, and Manager from previous week (${tsWeekLabel()})?\n\nThis will apply to all matching or new rows.`)){
+    return;
+  }
+  
+  try{
+    // Create a map of previous week data by project code
+    const prevMap={};
+    tsPreviousWeekRows.forEach(row=>{
+      if(row.projectCode){
+        prevMap[row.projectCode]={
+          code:row.projectCode,
+          description:row.projectDescription||row.description||'',
+          manager:row.projectManager||''
+        };
+      }
+    });
+    
+    // Check if current week has any rows with matching project codes
+    const matchingCodes=tsRows.filter(r=>r.projectCode).map(r=>r.projectCode);
+    
+    // Update existing rows with matching project codes
+    for(const row of tsRows){
+      if(row.projectCode&&prevMap[row.projectCode]){
+        const data=prevMap[row.projectCode];
+        const fields={
+          weekStart:fmtDateISO(tsWeekStart),
+          projectCode:data.code,
+          projectDescription:data.description,
+          projectManager:data.manager
+        };
+        await apiPut('/timesheet/'+row.id,fields);
+      }
+    }
+    
+    // If no matching rows, create new ones from previous week
+    if(!matchingCodes.length&&tsPreviousWeekRows.length){
+      const toCreate=tsPreviousWeekRows.filter(r=>r.projectCode);
+      for(const prevRow of toCreate){
+        const newRow=await apiPost('/timesheet',{weekStart:fmtDateISO(tsWeekStart)});
+        const fields={
+          weekStart:fmtDateISO(tsWeekStart),
+          projectCode:prevRow.projectCode,
+          projectDescription:prevRow.projectDescription||prevRow.description||'',
+          projectManager:prevRow.projectManager||''
+        };
+        const updatedRow=await apiPut('/timesheet/'+newRow.id,fields);
+        tsRows.push(updatedRow);
+      }
+    }
+    
+    // Refresh the display
+    renderTimesheetTable();
+  }catch(e){
+    alert('Error copying from previous week: '+e.message);
+  }
+}
+
 // ─────────────────────────────────────────────
 // Action Tracker (backend-backed)
 // ─────────────────────────────────────────────
 const ACTION_STATUSES=['Not Started','In Progress','Completed','Blocked','On Hold'];
+const ACTION_PRIORITIES=['High','Medium','Low'];
 let atSections=[];
 let atSearch='';
 let atEditing=null; // {type:'section'|'action'|'sub', id}
 let atCollapsedSections=new Set();
 let atExpandedActions=new Set();
+let atPriorityFilter='all';
 
 function atStatusClass(status){
   return {'Not Started':'at-status-notstarted','In Progress':'at-status-inprogress','Completed':'at-status-completed','Blocked':'at-status-blocked','On Hold':'at-status-onhold'}[status]||'at-status-notstarted';
+}
+function atPriorityClass(priority){
+  return {'High':'at-priority-high','Medium':'at-priority-medium','Low':'at-priority-low'}[priority]||'at-priority-unassigned';
+}
+function atPriorityMatches(priority,filter){
+  if(filter==='Unassigned')return !priority;
+  return priority===filter;
+}
+function atCountUnassigned(){
+  let n=0;
+  atSections.forEach(s=>s.actions.forEach(a=>{
+    if(!a.priority)n++;
+    a.subactions.forEach(sub=>{if(!sub.priority)n++;});
+  }));
+  return n;
 }
 function atIsOverdue(dueDate,status){
   if(!dueDate||status==='Completed')return false;
@@ -1515,6 +1713,7 @@ async function renderActionTracker(){
 }
 
 function setAtSearch(v){atSearch=v;drawActionTracker();}
+function setAtPriorityFilter(v){atPriorityFilter=v;drawActionTracker();}
 function toggleAtSection(id){
   if(atCollapsedSections.has(id))atCollapsedSections.delete(id);else atCollapsedSections.add(id);
   drawActionTracker();
@@ -1531,14 +1730,32 @@ function atItemMatches(item,q){
 
 function drawActionTracker(){
   const q=atSearch.trim().toLowerCase();
+  const unassignedCount=atCountUnassigned();
   let html=`<div class="fw-toolbar" style="flex-wrap:wrap">
     <input class="fw-filter-input" style="width:260px" placeholder="🔍 Search actions, owners, comments..." value="${esc(atSearch)}" oninput="setAtSearch(this.value)"/>
+    <select class="fw-input" style="width:160px" onchange="setAtPriorityFilter(this.value)">
+      <option value="all"${atPriorityFilter==='all'?' selected':''}>All priorities</option>
+      ${ACTION_PRIORITIES.map(p=>`<option value="${p}"${atPriorityFilter===p?' selected':''}>${p} priority</option>`).join('')}
+      <option value="Unassigned"${atPriorityFilter==='Unassigned'?' selected':''}>Unassigned</option>
+    </select>
+    <span style="font-size:12px;color:var(--text3)">${unassignedCount} unassigned</span>
     <button class="fw-add-btn" onclick="addAtSection()">+ Add Section</button>
   </div>`;
 
   let sections=atSections;
+  if(atPriorityFilter!=='all'){
+    sections=sections.map(sec=>{
+      const actions=sec.actions.map(act=>{
+        const subactions=act.subactions.filter(s=>atPriorityMatches(s.priority,atPriorityFilter));
+        if(!atPriorityMatches(act.priority,atPriorityFilter)&&!subactions.length)return null;
+        return {...act,subactions};
+      }).filter(Boolean);
+      if(!actions.length)return null;
+      return {...sec,actions};
+    }).filter(Boolean);
+  }
   if(q){
-    sections=atSections.map(sec=>{
+    sections=sections.map(sec=>{
       const secMatch=atMatch(sec.name,q);
       const actions=sec.actions.map(act=>{
         const actMatch=atItemMatches(act,q);
@@ -1555,13 +1772,14 @@ function drawActionTracker(){
   }
 
   if(!sections.length){
-    html+=`<div style="text-align:center;color:var(--text3);padding:40px">${q?`No actions match "${esc(atSearch)}"`:'No sections yet. Click "+ Add Section" to get started.'}</div>`;
+    const reason=q?`No actions match "${esc(atSearch)}"`:atPriorityFilter!=='all'?`No actions with ${esc(atPriorityFilter)} priority`:'No sections yet. Click "+ Add Section" to get started.';
+    html+=`<div style="text-align:center;color:var(--text3);padding:40px">${reason}</div>`;
     setView(html);
     return;
   }
 
   sections.forEach(sec=>{
-    const collapsed=atCollapsedSections.has(sec.id)&&!q;
+    const collapsed=atCollapsedSections.has(sec.id)&&!q&&atPriorityFilter==='all';
     const editingSec=atEditing&&atEditing.type==='section'&&atEditing.id===sec.id;
     html+=`<div class="at-section">`;
     html+=`<div class="at-section-hdr">`;
@@ -1587,7 +1805,7 @@ function drawActionTracker(){
 }
 
 function drawAtAction(act,q){
-  const expanded=atExpandedActions.has(act.id)||!!q;
+  const expanded=atExpandedActions.has(act.id)||!!q||atPriorityFilter!=='all';
   const editing=atEditing&&atEditing.type==='action'&&atEditing.id===act.id;
   const overdue=atIsOverdue(act.dueDate,act.status);
   let html=`<div class="at-action">`;
@@ -1598,12 +1816,14 @@ function drawAtAction(act,q){
       <input class="fw-input" id="at-act-${act.id}-title" type="text" placeholder="Action title" value="${esc(act.title||'')}"/>
       <input class="fw-input" id="at-act-${act.id}-owner" type="text" placeholder="Owner" value="${esc(act.owner||'')}"/>
       <select class="fw-input" id="at-act-${act.id}-status">${ACTION_STATUSES.map(s=>`<option value="${s}"${(act.status||'Not Started')===s?' selected':''}>${s}</option>`).join('')}</select>
+      <select class="fw-input" id="at-act-${act.id}-priority">${ACTION_PRIORITIES.map(p=>`<option value="${p}"${(act.priority||'Medium')===p?' selected':''}>${p}</option>`).join('')}</select>
       <input class="fw-input" id="at-act-${act.id}-dueDate" type="date" value="${act.dueDate||''}"/>
     </div>
     <div class="at-acts"><button class="fw-icon-btn save" title="Save" onclick="saveAtAction(${act.id})">✅</button><button class="fw-icon-btn cancel" title="Cancel" onclick="cancelAtEdit()">✖</button></div>`;
   }else{
     html+=`<div class="at-title">${hlText(act.title||'(untitled action)',q)}</div>`;
     html+=`<span class="fw-status-badge ${atStatusClass(act.status)}">${esc(act.status||'Not Started')}</span>`;
+    html+=`<span class="fw-status-badge ${atPriorityClass(act.priority)}">${esc(act.priority||'Medium')}</span>`;
     if(act.owner)html+=`<span class="at-owner">👤 ${hlText(act.owner,q)}</span>`;
     if(act.dueDate)html+=`<span class="at-due${overdue?' at-overdue':''}">📅 ${esc(act.dueDate)}${overdue?' (overdue)':''}</span>`;
     html+=`<div class="at-acts"><button class="fw-icon-btn" title="Edit" onclick="editAtAction(${act.id})">✏️</button><button class="fw-icon-btn del" title="Delete" onclick="deleteAtAction(${act.id})">🗑</button></div>`;
@@ -1635,12 +1855,14 @@ function drawAtSub(actionId,sub,q){
       <input class="fw-input" id="at-sub-${sub.id}-title" type="text" placeholder="Sub-action title" value="${esc(sub.title||'')}"/>
       <input class="fw-input" id="at-sub-${sub.id}-owner" type="text" placeholder="Owner" value="${esc(sub.owner||'')}"/>
       <select class="fw-input" id="at-sub-${sub.id}-status">${ACTION_STATUSES.map(s=>`<option value="${s}"${(sub.status||'Not Started')===s?' selected':''}>${s}</option>`).join('')}</select>
+      <select class="fw-input" id="at-sub-${sub.id}-priority">${ACTION_PRIORITIES.map(p=>`<option value="${p}"${(sub.priority||'Medium')===p?' selected':''}>${p}</option>`).join('')}</select>
       <input class="fw-input" id="at-sub-${sub.id}-dueDate" type="date" value="${sub.dueDate||''}"/>
     </div>
     <div class="at-acts"><button class="fw-icon-btn save" title="Save" onclick="saveAtSub(${sub.id})">✅</button><button class="fw-icon-btn cancel" title="Cancel" onclick="cancelAtEdit()">✖</button></div>`;
   }else{
     html+=`<div class="at-title">${hlText(sub.title||'(untitled sub-action)',q)}</div>`;
     html+=`<span class="fw-status-badge ${atStatusClass(sub.status)}">${esc(sub.status||'Not Started')}</span>`;
+    html+=`<span class="fw-status-badge ${atPriorityClass(sub.priority)}">${esc(sub.priority||'Medium')}</span>`;
     if(sub.owner)html+=`<span class="at-owner">👤 ${hlText(sub.owner,q)}</span>`;
     if(sub.dueDate)html+=`<span class="at-due${overdue?' at-overdue':''}">📅 ${esc(sub.dueDate)}${overdue?' (overdue)':''}</span>`;
     html+=`<div class="at-acts"><button class="fw-icon-btn" title="Edit" onclick="editAtSub(${sub.id})">✏️</button><button class="fw-icon-btn del" title="Delete" onclick="deleteAtSub(${sub.id},${actionId})">🗑</button></div>`;
@@ -1706,7 +1928,7 @@ async function deleteAtSection(id){
 
 async function addAtAction(sectionId){
   let act;
-  try{act=await apiPost('/action-items',{sectionId,title:'',owner:'',status:'Not Started',dueDate:'',comments:''});}
+  try{act=await apiPost('/action-items',{sectionId,title:'',owner:'',status:'Not Started',priority:'Medium',dueDate:'',comments:''});}
   catch(e){alert('Could not add action (is the backend running?): '+e.message);return;}
   act.subactions=[];
   const sec=atFindSection(sectionId);
@@ -1723,6 +1945,7 @@ async function saveAtAction(id){
     title:document.getElementById(`at-act-${id}-title`).value,
     owner:document.getElementById(`at-act-${id}-owner`).value,
     status:document.getElementById(`at-act-${id}-status`).value,
+    priority:document.getElementById(`at-act-${id}-priority`).value,
     dueDate:document.getElementById(`at-act-${id}-dueDate`).value,
     comments:document.getElementById(`at-act-${id}-comments`).value,
   };
@@ -1744,7 +1967,7 @@ async function deleteAtAction(id){
 
 async function addAtSub(actionId){
   let sub;
-  try{sub=await apiPost('/action-subitems',{actionId,title:'',owner:'',status:'Not Started',dueDate:'',comments:''});}
+  try{sub=await apiPost('/action-subitems',{actionId,title:'',owner:'',status:'Not Started',priority:'Medium',dueDate:'',comments:''});}
   catch(e){alert('Could not add sub-action (is the backend running?): '+e.message);return;}
   const act=atFindAction(actionId);
   act.subactions.push(sub);
@@ -1759,6 +1982,7 @@ async function saveAtSub(id){
     title:document.getElementById(`at-sub-${id}-title`).value,
     owner:document.getElementById(`at-sub-${id}-owner`).value,
     status:document.getElementById(`at-sub-${id}-status`).value,
+    priority:document.getElementById(`at-sub-${id}-priority`).value,
     dueDate:document.getElementById(`at-sub-${id}-dueDate`).value,
     comments:document.getElementById(`at-sub-${id}-comments`).value,
   };
@@ -2049,7 +2273,7 @@ async function vCode(file,lang,name){
     const text=(await file.text()).slice(0,500000);
     wrap.innerHTML=`<div class="code-bar"><span class="code-lang">${lang||'text'}</span><span class="code-meta">${fmtBytes(file.size)} · too large for highlight</span></div>`;
     const pre=document.createElement('pre');
-    pre.style.cssText='padding:20px;overflow-x:auto;background:#161b22;color:#adbac7;font-family:monospace;font-size:13px;line-height:1.6;white-space:pre';
+    pre.style.cssText='padding:20px;overflow-x:auto;background:var(--panel);color:#adbac7;font-family:monospace;font-size:13px;line-height:1.6;white-space:pre';
     pre.textContent=text+(file.size>500000?'\n\n[...truncated...]':'');
     wrap.appendChild(pre);
   }else{
@@ -2204,6 +2428,9 @@ function renderSheet(wb,si,page=0){
   xlsWb=wb;
   xlsSheetIndex=si;
   xlsPage=page;
+  xlsSearchQuery='';
+  xlsSortCol=null;
+  xlsSortOrder='asc';
   const ws=wb.Sheets[wb.SheetNames[si]];
   xlsData=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
   renderSheetPage();
@@ -2218,15 +2445,37 @@ function renderSheetPage(){
   }
   if(!data.length){html+='<div class="no-view"><div class="no-icon">📗</div><h3>Empty sheet</h3></div>';setView(html);return;}
   const cols=Math.max(...data.map(r=>r.length));
-  const totalRows=data.length-1;
+  const headers=data[0]||[];
+  let dataRows=data.slice(1);
+  if(xlsSearchQuery){
+    dataRows=dataRows.filter(row=>row.some(cell=>String(cell??'').toLowerCase().includes(xlsSearchQuery.toLowerCase())));
+  }
+  if(xlsSortCol!==null){
+    const col=xlsSortCol;
+    dataRows.sort((a,b)=>{
+      const aVal=String(a[col]??'').toLowerCase();
+      const bVal=String(b[col]??'').toLowerCase();
+      const cmp=aVal.localeCompare(bVal,undefined,{numeric:true});
+      return xlsSortOrder==='asc'?cmp:-cmp;
+    });
+  }
+  const filteredRows=dataRows;
+  const totalRows=filteredRows.length;
   const totalPages=Math.max(1,Math.ceil(totalRows/pageSize));
   let page=Math.min(Math.max(xlsPage,0),totalPages-1);
   xlsPage=page;
   const startRow=page*pageSize;
   const endRow=Math.min(totalRows,startRow+pageSize);
+  html+=`<div class="sheet-search" style="margin-bottom:12px;display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+    <div style="flex:1;min-width:200px;display:flex;align-items:center;gap:6px;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:0 8px">
+      <span style="color:var(--text3);font-size:13px">🔍</span>
+      <input type="text" id="xlsx-search" placeholder="Search all columns…" value="${esc(xlsSearchQuery)}" onkeyup="updateExcelSearch(this.value)" style="flex:1;background:transparent;border:none;color:var(--text);font-size:12px;padding:6px;outline:none"/>
+      ${xlsSearchQuery?`<button onclick="clearExcelSearch()" style="background:none;border:none;color:var(--text2);cursor:pointer;font-size:12px;padding:0 4px">✕</button>`:''}
+    </div>
+  </div>`;
   if(totalRows>pageSize){
     html+=`<div class="sheet-pager">
-      <span class="pager-info">Rows ${totalRows?startRow+1:0}–${endRow} of ${totalRows.toLocaleString()}</span>
+      <span class="pager-info">Rows ${totalRows?startRow+1:0}–${endRow} of ${totalRows.toLocaleString()}${xlsSearchQuery?` (filtered)`:''}}</span>
       <div class="pager-btns">
         <button onclick="goToSheetPage(0)" ${page===0?'disabled':''}>« First</button>
         <button onclick="goToSheetPage(${page-1})" ${page===0?'disabled':''}>‹ Prev</button>
@@ -2240,12 +2489,16 @@ function renderSheetPage(){
     </div>`;
   }
   html+='<div class="tbl-wrap"><table class="sheet-tbl"><thead><tr><th class="rn">#</th>';
-  data[0].forEach(c=>html+=`<th>${esc(String(c??''))}</th>`);
-  for(let i=data[0].length;i<cols;i++)html+='<th></th>';
+  headers.forEach((col,colIdx)=>{
+    const isSorted=xlsSortCol===colIdx;
+    const sortArrow=isSorted?(xlsSortOrder==='asc'?'▲':'▼'):'';
+    html+=`<th style="cursor:pointer;position:relative" onclick="toggleExcelSort(${colIdx})" title="Click to sort">${esc(String(col??''))}<span style="margin-left:4px;color:${isSorted?'var(--accent)':'var(--text3)'};font-size:11px">${sortArrow}</span></th>`;
+  });
+  for(let i=headers.length;i<cols;i++)html+='<th></th>';
   html+='</tr></thead><tbody>';
-  for(let ri=startRow;ri<endRow;ri++){
-    const row=data[ri+1]||[];
-    html+=`<tr><td class="rn">${ri+1}</td>`;
+  for(let i=0;i<Math.min(endRow-startRow,filteredRows.length);i++){
+    const row=filteredRows[startRow+i]||[];
+    html+=`<tr><td class="rn">${startRow+i+1}</td>`;
     for(let c=0;c<cols;c++){const v=row[c]??'';html+=`<td title="${esc(String(v))}">${esc(String(v))}</td>`;}
     html+='</tr>';
   }
@@ -2253,6 +2506,20 @@ function renderSheetPage(){
 }
 function goToSheetPage(page){xlsPage=page;renderSheetPage();}
 function changeSheetPageSize(v){xlsPageSize=parseInt(v)||200;xlsPage=0;renderSheetPage();}
+function updateExcelSearch(query){xlsSearchQuery=query.trim();xlsPage=0;renderSheetPage();}
+function clearExcelSearch(){xlsSearchQuery='';xlsPage=0;renderSheetPage();}
+function toggleExcelSort(colIdx){
+  if(xlsSortCol===colIdx){xlsSortOrder=xlsSortOrder==='asc'?'desc':'asc';}
+  else{xlsSortCol=colIdx;xlsSortOrder='asc';}
+  xlsPage=0;renderSheetPage();
+}
+function updateExcelSearch(query){xlsSearchQuery=query.trim();xlsPage=0;renderSheetPage();}
+function clearExcelSearch(){xlsSearchQuery='';xlsPage=0;renderSheetPage();}
+function toggleExcelSort(colIdx){
+  if(xlsSortCol===colIdx){xlsSortOrder=xlsSortOrder==='asc'?'desc':'asc';}
+  else{xlsSortCol=colIdx;xlsSortOrder='asc';}
+  xlsPage=0;renderSheetPage();
+}
 async function vDocx(file){
   if(typeof mammoth==='undefined'){setView(`<div class="no-view"><div class="no-icon">⚠️</div><h3>mammoth.js not loaded</h3><p>Check your internet connection.</p></div>`);return;}
   try{const r=await mammoth.convertToHtml({arrayBuffer:await file.arrayBuffer()});setView(`<div class="docx-wrap">${r.value}</div>`);}
@@ -2316,6 +2583,22 @@ function toggleSidebar(){
 }
 
 // ─────────────────────────────────────────────
+// Light/dark theme toggle
+// ─────────────────────────────────────────────
+const THEME_KEY='fileview-theme';
+function applyTheme(theme){
+  document.body.classList.toggle('light',theme==='light');
+  const btn=document.getElementById('btn-theme');
+  btn.textContent=theme==='light'?'☀':'🌙';
+  btn.title=theme==='light'?'Switch to dark theme':'Switch to light theme';
+}
+function toggleTheme(){
+  const next=document.body.classList.contains('light')?'dark':'light';
+  localStorage.setItem(THEME_KEY,next);
+  applyTheme(next);
+}
+
+// ─────────────────────────────────────────────
 // Keyboard shortcuts
 // ─────────────────────────────────────────────
 document.addEventListener('keydown',e=>{
@@ -2328,6 +2611,7 @@ document.addEventListener('keydown',e=>{
 // Init — render Tools workspace + restore previously opened folders
 // ─────────────────────────────────────────────
 (async function init(){
+  applyTheme(localStorage.getItem(THEME_KEY)||'dark');
   renderToolsSection();
   await loadFavourites();
   renderFavouritesSection();

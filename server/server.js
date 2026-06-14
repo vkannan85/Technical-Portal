@@ -78,9 +78,31 @@ CREATE TABLE IF NOT EXISTS action_subitems (
 );
 `);
 
+const hasProjectDescription = db.prepare("PRAGMA table_info(timesheet_entries)").all().some(c => c.name === 'projectDescription');
+if (!hasProjectDescription) {
+  db.exec('ALTER TABLE timesheet_entries ADD COLUMN projectDescription TEXT');
+}
+
+const hasItemPriority = db.prepare("PRAGMA table_info(action_items)").all().some(c => c.name === 'priority');
+if (!hasItemPriority) {
+  db.exec("ALTER TABLE action_items ADD COLUMN priority TEXT DEFAULT 'Medium'");
+}
+const hasSubitemPriority = db.prepare("PRAGMA table_info(action_subitems)").all().some(c => c.name === 'priority');
+if (!hasSubitemPriority) {
+  db.exec("ALTER TABLE action_subitems ADD COLUMN priority TEXT DEFAULT 'Medium'");
+}
+
 const app = express();
 app.use(cors());
 app.use(express.json());
+
+// Serve static files from parent directory
+app.use(express.static(path.join(__dirname, '..')));
+
+// Serve index route
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'file-explorer.html'));
+});
 
 // ───────────────────────────────────────────
 // Firewall Rules
@@ -138,7 +160,7 @@ app.post('/api/firewall-rules/bulk-update', (req, res) => {
 // ───────────────────────────────────────────
 // Timesheet
 // ───────────────────────────────────────────
-const TS_FIELDS = ['weekStart','projectManager','projectCode','mon','tue','wed','thu','fri','sat','sun','notes'];
+const TS_FIELDS = ['weekStart','projectManager','projectCode','projectDescription','mon','tue','wed','thu','fri','sat','sun'];
 
 app.get('/api/timesheet', (req, res) => {
   const week = req.query.week;
@@ -199,7 +221,7 @@ app.delete('/api/favourites/by-sp/:sp', (req, res) => {
 // ───────────────────────────────────────────
 // Action Tracker
 // ───────────────────────────────────────────
-const ACTION_FIELDS = ['title', 'owner', 'status', 'dueDate', 'comments'];
+const ACTION_FIELDS = ['title', 'owner', 'status', 'dueDate', 'comments', 'priority'];
 
 app.get('/api/action-tracker', (req, res) => {
   const sections = db.prepare('SELECT * FROM action_sections ORDER BY position ASC, id ASC').all();
